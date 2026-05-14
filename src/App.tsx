@@ -9,6 +9,8 @@ import UploadModal from './components/UploadModal';
 import MobileNav from './components/MobileNav';
 import ExploreView from './components/ExploreView';
 import LibraryView from './components/LibraryView';
+import AuthPage from './components/AuthPage';
+import AboutSection from './components/AboutSection';
 import { Track, View } from './types';
 import { supabase } from './lib/supabase';
 import { User } from '@supabase/supabase-js';
@@ -185,9 +187,20 @@ export default function App() {
     });
   }, [tracks]);
 
+  // Auto-redirect authenticated users away from auth page
+  useEffect(() => {
+    if (user && currentView === 'auth') {
+      setCurrentView('home');
+    }
+  }, [user, currentView]);
+
+  const handleLoginClick = () => {
+    setCurrentView('auth');
+  };
+
   const handleUploadClick = () => {
     if (!user) {
-      alert("Please authenticate to upload your sound.");
+      setCurrentView('auth');
       return;
     }
     setIsUploadModalOpen(true);
@@ -330,6 +343,8 @@ export default function App() {
                 )}
               </div>
             </section>
+
+            {!searchQuery && <AboutSection />}
           </motion.div>
         );
     }
@@ -356,7 +371,8 @@ export default function App() {
       
       <main className="flex-1 flex flex-col relative z-10 overflow-y-auto no-scrollbar">
         <Header 
-          onUploadClick={handleUploadClick} 
+          onUploadClick={handleUploadClick}
+          onLoginClick={handleLoginClick}
           currentTheme={theme}
           onThemeChange={setTheme}
           user={user}
@@ -390,6 +406,15 @@ export default function App() {
             isOpen={isUploadModalOpen} 
             onClose={() => setIsUploadModalOpen(false)} 
             onUpload={handleUpload}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {currentView === 'auth' && (
+          <AuthPage
+            onBack={() => setCurrentView('home')}
+            onSuccess={() => setCurrentView('home')}
           />
         )}
       </AnimatePresence>

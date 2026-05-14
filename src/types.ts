@@ -1,6 +1,6 @@
 import { User } from '@supabase/supabase-js';
 
-export type View = 'home' | 'explore' | 'library' | 'favorites';
+export type View = 'home' | 'explore' | 'library' | 'favorites' | 'auth';
 
 export interface Track {
   id: string;

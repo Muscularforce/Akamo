@@ -218,3 +218,58 @@
 .text-glow {
   text-shadow: 0 0 20px rgba(29, 185, 84, 0.5), 0 0 40px rgba(29, 185, 84, 0.2);
 }
+
+/* ─── GPU Compositing & High Refresh Rate ────────────────────────────────── */
+/* Forces animated elements onto their own compositor layer so animations    */
+/* run on the GPU at the display's native refresh rate (120Hz / 144Hz / 240Hz). */
+
+/* All Framer Motion elements get GPU layer promotion */
+[style*="transform"],
+[style*="opacity"] {
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* Utility class for explicit GPU promotion */
+.gpu-accelerated {
+  will-change: transform, opacity;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* Promote all CSS-animated elements to compositor layers */
+.animate-fluid-blob,
+.aurora-gradient,
+.aurora-text,
+.aurora-shimmer,
+.accent-shimmer::after {
+  will-change: transform, opacity, background-position;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* Animate spin at native refresh rate */
+.animate-spin {
+  will-change: transform;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* Smooth all CSS transitions at native Hz */
+*, *::before, *::after {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Backdrop-filter elements need their own layer */
+.liquid-glass,
+.glass,
+[class*="backdrop-blur"] {
+  will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}

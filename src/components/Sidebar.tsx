@@ -103,7 +103,19 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
 
       <div className="mt-auto p-6 rounded-3xl bg-gradient-to-br from-white/10 to-transparent border border-white/10 relative overflow-hidden group shrink-0">
         <div className="absolute top-0 right-0 w-24 h-24 bg-spotify-green/20 blur-2xl rounded-full -translate-y-1/2 translate-x-1/2" />
-        <h4 className="text-sm font-bold mb-2 relative z-10">Premium Experience</h4>
+        <h4 className="text-sm font-bold mb-2 relative z-10">
+          <span className="font-display tracking-tight">Akamo</span>
+          <span
+            className="relative -top-1 ml-[1px] text-[0.65em] font-black"
+            style={{
+              background: 'var(--accent-gradient)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+              opacity: 0.85,
+            }}
+          >+</span>
+        </h4>
         <p className="text-[10px] text-spotify-text-muted mb-4 leading-relaxed relative z-10">Unlock spatial audio and advanced equalizers for your journey.</p>
         <button className="w-full py-2.5 bg-white text-black text-[10px] font-bold rounded-xl hover:scale-105 active:scale-95 transition-all uppercase tracking-widest relative z-10">
           Upgrade Now

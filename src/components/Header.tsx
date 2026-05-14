@@ -8,6 +8,7 @@ import AuroraBadge from './AuroraBadge';
 
 interface HeaderProps {
     onUploadClick: () => void;
+    onLoginClick: () => void;
     currentTheme: 'dark' | 'pink';
     onThemeChange: (theme: 'dark' | 'pink') => void;
     user: User | null;
@@ -15,7 +16,7 @@ interface HeaderProps {
     onSearchChange: (query: string) => void;
 }
 
-export default function Header({ onUploadClick, currentTheme, onThemeChange, user, searchQuery, onSearchChange }: HeaderProps) {
+export default function Header({ onUploadClick, onLoginClick, currentTheme, onThemeChange, user, searchQuery, onSearchChange }: HeaderProps) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const settingsRef = useRef<HTMLDivElement>(null);
@@ -34,14 +35,7 @@ export default function Header({ onUploadClick, currentTheme, onThemeChange, use
     return () => mainElement?.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const handleLogin = async () => {
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
-      if (error) throw error;
-    } catch (error) {
-      console.error("Login failed:", error);
-    }
-  };
+
 
   const handleLogout = async () => {
     try {
@@ -208,12 +202,15 @@ export default function Header({ onUploadClick, currentTheme, onThemeChange, use
             </div>
           </>
         ) : (
-          <button 
-            onClick={handleLogin}
-            className="liquid-glass text-spotify-text px-8 py-2.5 rounded-full text-xs font-bold hover:scale-105 active:scale-95 transition-all tracking-widest uppercase"
+          <motion.button
+            onClick={onLoginClick}
+            whileHover={{ scale: 1.05, y: -1 }}
+            whileTap={{ scale: 0.95 }}
+            className="relative overflow-hidden text-black px-7 py-2.5 rounded-full text-[11px] font-bold tracking-widest uppercase accent-shimmer"
+            style={{ background: 'var(--accent-gradient)', boxShadow: '0 4px 20px rgba(29, 185, 84, 0.3)' }}
           >
-            Authenticate
-          </button>
+            Login
+          </motion.button>
         )}
       </div>
     </header>
