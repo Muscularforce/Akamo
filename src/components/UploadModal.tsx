@@ -1,23 +1,23 @@
-import { X, Upload, Music, CheckCircle2, Image as ImageIcon, AlertCircle, RefreshCw } from 'lucide-react';
+import { X, Upload, Music, CheckCircle2, Image as ImageIcon, AlertCircle, RefreshCw, User as UserIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import React, { useState, useRef, useEffect } from 'react';
-import { Track } from '../types';
+import { Track, UserProfile } from '../types';
 import { supabase } from '../lib/supabase';
 
 interface UploadModalProps {
   isOpen: boolean;
   onClose: () => void;
   onUpload: (track: Omit<Track, 'id'>) => void;
+  userProfile: UserProfile | null;
 }
 
 type ValidationErrors = {
   audio?: string;
   cover?: string;
   title?: string;
-  artist?: string;
 };
 
-export default function UploadModal({ isOpen, onClose, onUpload }: UploadModalProps) {
+export default function UploadModal({ isOpen, onClose, onUpload, userProfile }: UploadModalProps) {
   const [dragActive, setDragActive] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -32,27 +32,15 @@ export default function UploadModal({ isOpen, onClose, onUpload }: UploadModalPr
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [title, setTitle] = useState('');
-  const [artist, setArtist] = useState('');
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
 
   const audioInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user && !artist) {
-        setArtist(user.user_metadata?.full_name || user.user_metadata?.name || '');
-      }
-    });
-  }, [artist]);
-
   // Clear field-level error when user fixes it
   useEffect(() => {
     if (title && validationErrors.title) setValidationErrors(prev => ({ ...prev, title: undefined }));
   }, [title]);
-  useEffect(() => {
-    if (artist && validationErrors.artist) setValidationErrors(prev => ({ ...prev, artist: undefined }));
-  }, [artist]);
   useEffect(() => {
     if (coverFile && validationErrors.cover) setValidationErrors(prev => ({ ...prev, cover: undefined }));
   }, [coverFile]);
@@ -83,7 +71,7 @@ export default function UploadModal({ isOpen, onClose, onUpload }: UploadModalPr
     reader.readAsDataURL(file);
   };
 
-
+  const uploaderName = userProfile?.display_name || 'Unknown';
 
   const handlePublish = async () => {
     // Validation
@@ -91,10 +79,15 @@ export default function UploadModal({ isOpen, onClose, onUpload }: UploadModalPr
     if (!audioFile) errors.audio = 'Audio file is required';
     if (!coverFile) errors.cover = 'Cover image is required';
     if (!title.trim()) errors.title = 'Title is required';
-    if (!artist.trim()) errors.artist = 'Artist name is required';
 
     if (Object.keys(errors).length > 0) {
       setValidationErrors(errors);
+      triggerShake();
+      return;
+    }
+
+    if (!userProfile) {
+      setErrorMessage('Profile not loaded. Please try again.');
       triggerShake();
       return;
     }
@@ -146,8 +139,8 @@ export default function UploadModal({ isOpen, onClose, onUpload }: UploadModalPr
       
       const newTrack: Omit<Track, 'id'> = {
         title: title.trim(),
-        artist: artist.trim(),
-        album: 'Supabase Session',
+        artist: uploaderName,
+        album: 'Akamo Upload',
         coverUrl,
         audioUrl,
         coverPath,
@@ -185,10 +178,6 @@ export default function UploadModal({ isOpen, onClose, onUpload }: UploadModalPr
     setAudioFile(null);
     setCoverFile(null);
     setTitle('');
-    setArtist('');
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) setArtist(user.user_metadata?.full_name || user.user_metadata?.name || '');
-    });
     setCoverPreview(null);
     setStep('upload');
   };
@@ -371,22 +360,21 @@ export default function UploadModal({ isOpen, onClose, onUpload }: UploadModalPr
                           >{validationErrors.title}</motion.p>
                         )}
                       </div>
+
+                      {/* Uploading as — read-only identity pill */}
                       <div>
-                        <label className="block text-[10px] font-bold text-spotify-text-muted uppercase tracking-widest mb-2 ml-4">Architect (Creator) <span className="text-red-500">*</span></label>
-                        <input 
-                          type="text"
-                          value={artist}
-                          onChange={(e) => setArtist(e.target.value)}
-                          placeholder="Who crafted this?"
-                          className={`w-full h-14 bg-white/5 rounded-2xl px-6 text-spotify-text focus:outline-none focus:ring-2 border transition-all ${
-                            validationErrors.artist ? 'border-red-500/50 focus:ring-red-500/30' : 'border-white/5 focus:ring-spotify-green/20'
-                          }`}
-                        />
-                        {validationErrors.artist && (
-                          <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
-                            className="text-[10px] text-red-400 font-bold mt-1.5 ml-4 uppercase tracking-widest"
-                          >{validationErrors.artist}</motion.p>
-                        )}
+                        <label className="block text-[10px] font-bold text-spotify-text-muted uppercase tracking-widest mb-2 ml-4">Publishing As</label>
+                        <div className="w-full h-14 bg-white/[0.03] rounded-2xl px-6 flex items-center gap-3 border border-white/5">
+                          <div className="w-8 h-8 rounded-full bg-spotify-green/20 flex items-center justify-center flex-shrink-0">
+                            {userProfile?.avatar_url ? (
+                              <img src={userProfile.avatar_url} alt="" className="w-full h-full rounded-full object-cover" />
+                            ) : (
+                              <UserIcon size={14} className="text-spotify-green" />
+                            )}
+                          </div>
+                          <span className="text-sm text-spotify-text font-medium truncate">{uploaderName}</span>
+                          <span className="ml-auto text-[9px] text-spotify-text-muted uppercase tracking-widest font-bold opacity-40">Auto</span>
+                        </div>
                       </div>
                     </div>
 
@@ -410,7 +398,7 @@ export default function UploadModal({ isOpen, onClose, onUpload }: UploadModalPr
                       )}
 
                       <button 
-                         disabled={uploading || success || !title.trim() || !artist.trim() || !audioFile || !coverFile}
+                         disabled={uploading || success || !title.trim() || !audioFile || !coverFile}
                          onClick={handlePublish}
                          className="w-full h-14 md:h-16 bg-spotify-green text-black font-black text-xs uppercase tracking-[0.2em] rounded-2xl accent-glow disabled:opacity-50 disabled:grayscale disabled:cursor-not-allowed transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3"
                       >

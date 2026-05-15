@@ -12,79 +12,11 @@ import LibraryView from './components/LibraryView';
 import AuthPage from './components/AuthPage';
 import AboutSection from './components/AboutSection';
 import VerifiedPage from './components/VerifiedPage';
-import { Track, View } from './types';
-import { supabase } from './lib/supabase';
+import AccountSettings from './components/AccountSettings';
+import { Track, View, UserProfile } from './types';
+import { supabase, fetchProfile } from './lib/supabase';
 import { User } from '@supabase/supabase-js';
-import { isFounder } from './constants';
-
-const INITIAL_TRACKS: Track[] = [
-  {
-    id: '1',
-    title: 'Midnight City',
-    artist: 'M83',
-    album: 'Hurry Up, We\'re Dreaming',
-    coverUrl: 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=400&h=400&auto=format&fit=crop',
-    audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
-    duration: 372,
-    type: 'audio',
-    uploadedAt: Date.now(),
-  },
-  {
-    id: '2',
-    title: 'Starboy',
-    artist: 'The Weeknd',
-    album: 'Starboy',
-    coverUrl: 'https://images.unsplash.com/photo-1493225255756-d9584f8606e9?q=80&w=400&h=400&auto=format&fit=crop',
-    audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',
-    duration: 230,
-    type: 'audio',
-    uploadedAt: Date.now(),
-  },
-  {
-    id: '3',
-    title: 'Blinding Lights',
-    artist: 'The Weeknd',
-    album: 'After Hours',
-    coverUrl: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?q=80&w=400&h=400&auto=format&fit=crop',
-    audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3',
-    duration: 200,
-    type: 'audio',
-    uploadedAt: Date.now(),
-  },
-  {
-    id: '4',
-    title: 'Heat Waves',
-    artist: 'Glass Animals',
-    album: 'Dreamland',
-    coverUrl: 'https://images.unsplash.com/photo-1459749411177-042180ce673c?q=80&w=400&h=400&auto=format&fit=crop',
-    audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3',
-    duration: 238,
-    type: 'audio',
-    uploadedAt: Date.now(),
-  },
-  {
-    id: '5',
-    title: 'Levitating',
-    artist: 'Dua Lipa',
-    album: 'Future Nostalgia',
-    coverUrl: 'https://images.unsplash.com/photo-1514525253361-bee8718a340b?q=80&w=400&h=400&auto=format&fit=crop',
-    audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3',
-    duration: 203,
-    type: 'audio',
-    uploadedAt: Date.now(),
-  },
-  {
-    id: '6',
-    title: 'Save Your Tears',
-    artist: 'The Weeknd',
-    album: 'After Hours',
-    coverUrl: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?q=80&w=400&h=400&auto=format&fit=crop',
-    audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-15.mp3',
-    duration: 215,
-    type: 'audio',
-    uploadedAt: Date.now(),
-  }
-];
+import { isFounder, isOwner } from './constants';
 
 export default function App() {
   const [tracks, setTracks] = useState<Track[]>([]);
@@ -95,7 +27,7 @@ export default function App() {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [user, setUser] = useState<User | null>(null);
-  const hasSeeded = useRef(false);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const hasSetInitialTrack = useRef(false);
   const userRef = useRef<User | null>(null);
 
@@ -109,9 +41,30 @@ export default function App() {
     );
   }, [tracks, searchQuery]);
 
-  // Keep userRef in sync so the Firestore callback can read fresh user
+  // Keep userRef in sync so callbacks can read fresh user
   useEffect(() => {
     userRef.current = user;
+  }, [user]);
+
+  // Fetch user profile when user changes
+  useEffect(() => {
+    if (user) {
+      fetchProfile(user.id).then(profile => {
+        if (profile) {
+          setUserProfile(profile);
+        } else {
+          // Profile doesn't exist yet (trigger may not have fired). Create a minimal one.
+          setUserProfile({
+            id: user.id,
+            display_name: user.user_metadata?.full_name || user.user_metadata?.name || '',
+            avatar_url: user.user_metadata?.avatar_url || null,
+            role: 'user',
+          });
+        }
+      });
+    } else {
+      setUserProfile(null);
+    }
   }, [user]);
 
   // Auth + Supabase subscriptions — runs ONCE on mount
@@ -237,7 +190,8 @@ export default function App() {
       alert("Please log in to delete tracks.");
       return;
     }
-    if (track.ownerId !== user.id && !isFounder(user.email)) {
+    // Owner role can delete any track; regular users can only delete their own
+    if (track.ownerId !== user.id && !isOwner(userProfile?.role) && !isFounder(user.email)) {
       alert("You don't have permission to delete this track.");
       return;
     }
@@ -275,6 +229,15 @@ export default function App() {
         return <LibraryView tracks={filteredTracks} onPlay={handlePlay} onUploadClick={handleUploadClick} onDelete={handleDeleteTrack} user={user} />;
       case 'favorites':
         return <LibraryView tracks={filteredTracks.slice(0, 3)} onPlay={handlePlay} onUploadClick={handleUploadClick} onDelete={handleDeleteTrack} user={user} />;
+      case 'account':
+        return user && userProfile ? (
+          <AccountSettings
+            user={user}
+            userProfile={userProfile}
+            onProfileUpdate={(updated) => setUserProfile(updated)}
+            onBack={() => setCurrentView('home')}
+          />
+        ) : null;
       default:
         return (
           <motion.div
@@ -313,7 +276,7 @@ export default function App() {
                     </div>
                     <div className="flex-1 px-6 py-2 truncate">
                       <h3 className="font-bold text-base truncate text-spotify-text tracking-tight group-hover:text-spotify-green transition-colors">{track.title}</h3>
-                      <p className="text-xs text-spotify-text-muted font-medium opacity-60 uppercase tracking-widest mt-1">{track.artist}</p>
+                      <p className="text-xs text-spotify-text-muted font-medium opacity-60 mt-1">{track.artist}</p>
                     </div>
                   </motion.div>
                 ))}
@@ -385,8 +348,10 @@ export default function App() {
           currentTheme={theme}
           onThemeChange={setTheme}
           user={user}
+          userProfile={userProfile}
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
+          onViewChange={setCurrentView}
         />
         
         <div className="px-6 md:px-12 py-10">
@@ -405,6 +370,7 @@ export default function App() {
           onTogglePlay={() => setIsPlaying(!isPlaying)}
           onNext={handleNext}
           onPrev={handlePrev}
+          userProfile={userProfile}
         />
         <MobileNav activeView={currentView} onViewChange={setCurrentView} />
       </div>
@@ -415,6 +381,7 @@ export default function App() {
             isOpen={isUploadModalOpen} 
             onClose={() => setIsUploadModalOpen(false)} 
             onUpload={handleUpload}
+            userProfile={userProfile}
           />
         )}
       </AnimatePresence>

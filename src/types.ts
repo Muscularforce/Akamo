@@ -1,6 +1,12 @@
-import { User } from '@supabase/supabase-js';
+export type View = 'home' | 'explore' | 'library' | 'favorites' | 'auth' | 'verified' | 'account';
 
-export type View = 'home' | 'explore' | 'library' | 'favorites' | 'auth' | 'verified';
+export interface UserProfile {
+  id: string;
+  display_name: string;
+  avatar_url: string | null;
+  role: 'user' | 'owner';
+  created_at?: string;
+}
 
 export interface Track {
   id: string;

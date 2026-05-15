@@ -4,8 +4,8 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import React, { useState, useRef, useEffect } from 'react';
-import { Track } from '../types';
-import { isFounder } from '../constants';
+import { Track, UserProfile } from '../types';
+import { isFounder, isOwner } from '../constants';
 import AuroraBadge from './AuroraBadge';
 
 interface PlayerProps {
@@ -14,6 +14,7 @@ interface PlayerProps {
   onTogglePlay: () => void;
   onNext: () => void;
   onPrev: () => void;
+  userProfile?: UserProfile | null;
 }
 
 const ScrollingText = ({ text, className, speed = 30 }: { text: string; className: string; speed?: number }) => {
@@ -46,11 +47,12 @@ const ScrollingText = ({ text, className, speed = 30 }: { text: string; classNam
   );
 };
 
-export default function Player({ currentTrack, isPlaying, onTogglePlay, onNext, onPrev }: PlayerProps) {
+export default function Player({ currentTrack, isPlaying, onTogglePlay, onNext, onPrev, userProfile }: PlayerProps) {
   const [progress, setProgress] = useState(0);
   const [volume, setVolume] = useState(0.7);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const isCreator = isFounder(currentTrack?.ownerEmail);
+  // Use role-based check if profile is available, fall back to email check
+  const isCreator = isOwner(userProfile?.role) || isFounder(currentTrack?.ownerEmail);
 
   useEffect(() => {
     if (audioRef.current) {

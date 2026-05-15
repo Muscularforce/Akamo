@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Mail, Lock, Eye, EyeOff, ArrowLeft, Check, Loader2, Music2, AlertTriangle } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, ArrowLeft, Check, Loader2, Music2, AlertTriangle, UserIcon } from 'lucide-react';
 import AnimatedInput from './AnimatedInput';
 import { supabase, isSupabaseMisconfigured } from '../lib/supabase';
 
@@ -92,6 +92,7 @@ export default function AuthPage({ onBack, onSuccess }: AuthPageProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPw, setConfirmPw] = useState('');
+  const [displayName, setDisplayName] = useState('');
   const [showPw, setShowPw] = useState(false);
   const [showConfirmPw, setShowConfirmPw] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -109,12 +110,15 @@ export default function AuthPage({ onBack, onSuccess }: AuthPageProps) {
     setAuthError('');
     setTouched({});
     setConfirmPw('');
+    setDisplayName('');
     setShowPw(false);
     setShowConfirmPw(false);
   }, [mode]);
 
   const validate = useCallback((): boolean => {
     const errs: Record<string, string> = {};
+    if (isSignup && !displayName.trim()) errs.displayName = 'Display name is required';
+    if (isSignup && displayName.trim().length > 0 && displayName.trim().length < 2) errs.displayName = 'Must be at least 2 characters';
     const emailErr = validateEmail(email);
     const pwErr = validatePassword(password, isSignup);
     if (emailErr) errs.email = emailErr;
@@ -123,12 +127,12 @@ export default function AuthPage({ onBack, onSuccess }: AuthPageProps) {
     if (isSignup && !confirmPw) errs.confirm = 'Please confirm your password';
     setErrors(errs);
     return Object.keys(errs).length === 0;
-  }, [email, password, confirmPw, isSignup]);
+  }, [email, password, confirmPw, isSignup, displayName]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError('');
-    setTouched({ email: true, password: true, confirm: true });
+    setTouched({ email: true, password: true, confirm: true, displayName: true });
 
     if (!validate()) {
       setShakeKey((k) => k + 1);
@@ -150,7 +154,7 @@ export default function AuthPage({ onBack, onSuccess }: AuthPageProps) {
     try {
       let result;
       if (isSignup) {
-        result = await supabase.auth.signUp({ email, password });
+        result = await supabase.auth.signUp({ email, password, options: { data: { full_name: displayName.trim() } } });
       } else {
         result = await supabase.auth.signInWithPassword({ email, password });
       }
@@ -353,6 +357,29 @@ export default function AuthPage({ onBack, onSuccess }: AuthPageProps) {
                         role="alert"
                       >
                         {authError}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Display Name (signup only) */}
+                  <AnimatePresence>
+                    {isSignup && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0, y: 12 }}
+                        animate={{ opacity: 1, height: 'auto', y: 0 }}
+                        exit={{ opacity: 0, height: 0, y: -12 }}
+                        transition={{ duration: 0.35, ease: cardEase }}
+                      >
+                        <AnimatedInput
+                          label="Display name"
+                          type="text"
+                          value={displayName}
+                          onChange={(v) => { setDisplayName(v); if (touched.displayName) { setErrors((e) => ({ ...e, displayName: !v.trim() ? 'Display name is required' : v.trim().length < 2 ? 'Must be at least 2 characters' : '' })); } }}
+                          error={touched.displayName ? errors.displayName : undefined}
+                          icon={<UserIcon size={18} />}
+                          autoComplete="name"
+                          disabled={isLoading}
+                        />
                       </motion.div>
                     )}
                   </AnimatePresence>

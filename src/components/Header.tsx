@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { User } from '@supabase/supabase-js';
-import { isFounder } from '../constants';
+import { isOwner } from '../constants';
+import { UserProfile } from '../types';
 import AuroraBadge from './AuroraBadge';
 
 interface HeaderProps {
@@ -12,17 +13,19 @@ interface HeaderProps {
     currentTheme: 'dark' | 'pink';
     onThemeChange: (theme: 'dark' | 'pink') => void;
     user: User | null;
+    userProfile: UserProfile | null;
     searchQuery: string;
     onSearchChange: (query: string) => void;
+    onViewChange: (view: 'account') => void;
 }
 
-export default function Header({ onUploadClick, onLoginClick, currentTheme, onThemeChange, user, searchQuery, onSearchChange }: HeaderProps) {
+export default function Header({ onUploadClick, onLoginClick, currentTheme, onThemeChange, user, userProfile, searchQuery, onSearchChange, onViewChange }: HeaderProps) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const settingsRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
   const [isScrolled, setIsScrolled] = useState(false);
-  const isCreator = isFounder(user?.email);
+  const isCreator = isOwner(userProfile?.role);
 
   useEffect(() => {
     const mainElement = document.querySelector('main');
@@ -147,8 +150,10 @@ export default function Header({ onUploadClick, onLoginClick, currentTheme, onTh
                 }`}
               >
                 <div className="w-full h-full rounded-full overflow-hidden bg-black">
-                  {user.user_metadata?.avatar_url ? (
-                    <img src={user.user_metadata.avatar_url} alt={user.user_metadata?.full_name || user.user_metadata?.name || 'User'} className="w-full h-full rounded-full object-cover" />
+                  {userProfile?.avatar_url ? (
+                    <img src={userProfile.avatar_url} alt={userProfile.display_name || 'User'} className="w-full h-full rounded-full object-cover" />
+                  ) : user.user_metadata?.avatar_url ? (
+                    <img src={user.user_metadata.avatar_url} alt={user.user_metadata?.full_name || 'User'} className="w-full h-full rounded-full object-cover" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
                       <UserIcon size={20} className="text-spotify-text-muted" />
@@ -167,7 +172,7 @@ export default function Header({ onUploadClick, onLoginClick, currentTheme, onTh
                   >
                     <div className="px-4 py-3 mb-2 border-b border-white/5">
                       <div className="flex items-center gap-2 mb-1">
-                        <p className="text-xs font-bold text-spotify-text truncate">{user.user_metadata?.full_name || user.user_metadata?.name || 'User'}</p>
+                        <p className="text-xs font-bold text-spotify-text truncate">{userProfile?.display_name || user.user_metadata?.full_name || 'User'}</p>
                         {isCreator && <AuroraBadge size="sm" />}
                       </div>
                       <p className="text-[10px] text-spotify-text-muted truncate opacity-60 tracking-wider uppercase">{user.email}</p>
@@ -182,8 +187,11 @@ export default function Header({ onUploadClick, onLoginClick, currentTheme, onTh
                         </motion.div>
                       )}
                     </div>
-                    <button className="w-full text-left px-4 py-2.5 text-[11px] hover:bg-white/10 rounded-xl transition-all flex items-center justify-between group">
-                        <span className="group-hover:translate-x-1 transition-transform">Account</span>
+                    <button
+                      onClick={() => { setIsProfileOpen(false); onViewChange('account'); }}
+                      className="w-full text-left px-4 py-2.5 text-[11px] hover:bg-white/10 rounded-xl transition-all flex items-center justify-between group"
+                    >
+                        <span className="group-hover:translate-x-1 transition-transform">Account Settings</span>
                     </button>
                     <button className="w-full text-left px-4 py-2.5 text-[11px] hover:bg-white/10 rounded-xl transition-all flex items-center justify-between group">
                         <span className="group-hover:translate-x-1 transition-transform">Profile</span>

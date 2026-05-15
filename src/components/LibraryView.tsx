@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from 'motion/react';
 import { Music, Plus, ListMusic, Clock, Filter, Trash2, Heart, MoreHorizontal } from 'lucide-react';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { Track } from '../types';
 import { User } from '@supabase/supabase-js';
 import { isFounder } from '../constants';
@@ -15,35 +16,58 @@ interface LibraryViewProps {
 
 function TrackRowMenu({ track, user, onDelete }: { track: Track; user?: User | null; onDelete?: (track: Track) => void }) {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  const canDelete = user && (track.ownerId === user.uid || isFounder(user.email));
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [menuPos, setMenuPos] = useState({ top: 0, left: 0 });
+  const canDelete = user && (track.ownerId === user.id || isFounder(user.email));
+
+  const updateMenuPos = useCallback(() => {
+    if (triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      setMenuPos({
+        top: rect.bottom + 4,
+        left: rect.right - 180,
+      });
+    }
+  }, []);
 
   useEffect(() => {
     if (!open) return;
+    updateMenuPos();
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (
+        menuRef.current && !menuRef.current.contains(e.target as Node) &&
+        triggerRef.current && !triggerRef.current.contains(e.target as Node)
+      ) {
+        setOpen(false);
+      }
     };
     document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [open]);
+    window.addEventListener('scroll', () => setOpen(false), true);
+    return () => {
+      document.removeEventListener('mousedown', handler);
+      window.removeEventListener('scroll', () => setOpen(false), true);
+    };
+  }, [open, updateMenuPos]);
 
   return (
-    <div className="relative flex-shrink-0" ref={ref}>
+    <>
       <button
+        ref={triggerRef}
         onClick={(e) => { e.stopPropagation(); setOpen(!open); }}
-        className="p-2 hover:bg-white/10 rounded-full transition-all text-spotify-text-muted hover:text-spotify-text opacity-0 group-hover:opacity-100"
+        className="p-2 hover:bg-white/10 rounded-full transition-all text-spotify-text-muted hover:text-spotify-text opacity-0 group-hover:opacity-100 flex-shrink-0"
       >
         <MoreHorizontal size={18} />
       </button>
 
-      <AnimatePresence>
-        {open && (
+      {open && createPortal(
+        <div ref={menuRef} className="fixed z-[9999]" style={{ top: menuPos.top, left: menuPos.left }}>
           <motion.div
             initial={{ opacity: 0, scale: 0.9, y: -4 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: -4 }}
             transition={{ duration: 0.15, ease: 'easeOut' }}
-            className="absolute right-0 top-full mt-1 z-50 min-w-[180px] py-1.5 rounded-2xl overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.7)] border border-white/10"
+            className="min-w-[180px] py-1.5 rounded-2xl overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.7)] border border-white/10"
             style={{
               background: 'linear-gradient(135deg, rgba(40, 40, 40, 0.98) 0%, rgba(25, 25, 25, 0.98) 100%)',
               backdropFilter: 'blur(40px)',
@@ -51,9 +75,9 @@ function TrackRowMenu({ track, user, onDelete }: { track: Track; user?: User | n
           >
             <button
               onClick={(e) => { e.stopPropagation(); setOpen(false); }}
-              className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-spotify-text hover:bg-white/10 transition-colors font-medium"
+              className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-white hover:bg-white/10 transition-colors font-medium"
             >
-              <Heart size={16} className="text-spotify-text-muted" />
+              <Heart size={16} className="text-white/50" />
               <span>Save to Liked</span>
             </button>
 
@@ -71,9 +95,10 @@ function TrackRowMenu({ track, user, onDelete }: { track: Track; user?: User | n
               </button>
             )}
           </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+        </div>,
+        document.body
+      )}
+    </>
   );
 }
 
