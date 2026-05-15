@@ -1,8 +1,8 @@
 import { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Mail, Lock, Eye, EyeOff, ArrowLeft, Check, Loader2, Music2 } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, ArrowLeft, Check, Loader2, Music2, AlertTriangle } from 'lucide-react';
 import AnimatedInput from './AnimatedInput';
-import { supabase } from '../lib/supabase';
+import { supabase, isSupabaseMisconfigured } from '../lib/supabase';
 
 type AuthMode = 'login' | 'signup';
 
@@ -13,11 +13,29 @@ interface AuthPageProps {
 
 // Map Supabase errors to friendly messages
 function friendlyError(msg: string): string {
-  if (msg.includes('Invalid login')) return 'Incorrect email or password.';
-  if (msg.includes('already registered')) return 'This email is already registered. Try logging in.';
-  if (msg.includes('Password should be')) return 'Password must be at least 6 characters.';
-  if (msg.includes('valid email')) return 'Please enter a valid email address.';
-  if (msg.includes('rate limit')) return 'Too many attempts. Please wait a moment.';
+  const m = msg.toLowerCase();
+  // Network / connection errors
+  if (m.includes('failed to fetch') || m.includes('networkerror') || m.includes('fetch'))
+    return 'Unable to reach the server. Check your internet connection and try again.';
+  if (m.includes('timeout') || m.includes('aborted'))
+    return 'The request timed out. Please try again.';
+  if (m.includes('cors'))
+    return 'Connection blocked. Please contact support.';
+  // Auth errors
+  if (m.includes('invalid login') || m.includes('invalid_credentials'))
+    return 'Incorrect email or password.';
+  if (m.includes('already registered') || m.includes('already been registered'))
+    return 'This email is already registered. Try logging in.';
+  if (m.includes('password should be') || m.includes('password') && m.includes('characters'))
+    return 'Password must be at least 6 characters.';
+  if (m.includes('valid email') || m.includes('invalid email'))
+    return 'Please enter a valid email address.';
+  if (m.includes('rate limit') || m.includes('too many'))
+    return 'Too many attempts. Please wait a moment.';
+  if (m.includes('email not confirmed'))
+    return 'Please check your email and confirm your account first.';
+  if (m.includes('signups not allowed'))
+    return 'Sign ups are currently disabled. Please contact the administrator.';
   return msg;
 }
 
@@ -117,19 +135,45 @@ export default function AuthPage({ onBack, onSuccess }: AuthPageProps) {
       return;
     }
 
+    if (isSupabaseMisconfigured) {
+      setAuthError('Authentication is not configured. Please set up your Supabase environment variables.');
+      setShakeKey((k) => k + 1);
+      return;
+    }
+
     setIsLoading(true);
+
+    // Timeout after 15 seconds to prevent hanging
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
     try {
+      let result;
       if (isSignup) {
-        const { error } = await supabase.auth.signUp({ email, password });
-        if (error) throw error;
+        result = await supabase.auth.signUp({ email, password });
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
+        result = await supabase.auth.signInWithPassword({ email, password });
       }
+
+      clearTimeout(timeoutId);
+
+      if (result.error) throw result.error;
+
+      // For signup, check if email confirmation is required
+      if (isSignup && result.data?.user?.identities?.length === 0) {
+        setAuthError('This email is already registered. Try logging in.');
+        setShakeKey((k) => k + 1);
+        return;
+      }
+
       setIsSuccess(true);
       setTimeout(onSuccess, 1200);
     } catch (err: any) {
-      setAuthError(friendlyError(err.message || 'Something went wrong'));
+      clearTimeout(timeoutId);
+      const message = err?.name === 'AbortError'
+        ? 'The request timed out. Please try again.'
+        : friendlyError(err?.message || err?.error_description || 'Something went wrong. Please try again.');
+      setAuthError(message);
       setShakeKey((k) => k + 1);
     } finally {
       setIsLoading(false);
