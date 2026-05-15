@@ -11,6 +11,7 @@ import ExploreView from './components/ExploreView';
 import LibraryView from './components/LibraryView';
 import AuthPage from './components/AuthPage';
 import AboutSection from './components/AboutSection';
+import VerifiedPage from './components/VerifiedPage';
 import { Track, View } from './types';
 import { supabase } from './lib/supabase';
 import { User } from '@supabase/supabase-js';
@@ -115,6 +116,14 @@ export default function App() {
 
   // Auth + Supabase subscriptions — runs ONCE on mount
   useEffect(() => {
+    // Check if user came from a verification email
+    const href = window.location.href;
+    if (href.includes('type=signup') || href.includes('type=recovery') || href.includes('type=magiclink')) {
+      setCurrentView('verified');
+      // Clean up the URL so it doesn't trigger again on refresh
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       userRef.current = session?.user ?? null;
@@ -219,7 +228,7 @@ export default function App() {
       if (error) throw error;
     } catch (error: any) {
       console.error("Error saving track:", error);
-      throw new Error('Failed to save track to library. Please try again.');
+      throw new Error(error.message || 'Failed to save track to library. Please try again.');
     }
   };
 
@@ -416,6 +425,12 @@ export default function App() {
             onBack={() => setCurrentView('home')}
             onSuccess={() => setCurrentView('home')}
           />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {currentView === 'verified' && (
+          <VerifiedPage onContinue={() => setCurrentView('home')} />
         )}
       </AnimatePresence>
     </div>
