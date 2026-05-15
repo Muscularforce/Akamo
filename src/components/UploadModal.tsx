@@ -1,4 +1,4 @@
-import { X, Upload, Music, CheckCircle2, Image as ImageIcon, AlertCircle, RefreshCw, User as UserIcon } from 'lucide-react';
+import { X, Upload, Music, CheckCircle2, Image as ImageIcon, AlertCircle, RefreshCw, User as UserIcon, Edit3 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import React, { useState, useRef, useEffect } from 'react';
 import { Track, UserProfile } from '../types';
@@ -8,22 +8,26 @@ interface UploadModalProps {
   isOpen: boolean;
   onClose: () => void;
   onUpload: (track: Omit<Track, 'id'>) => void;
+  onUpdate?: (track: Partial<Track>) => Promise<void>;
   userProfile: UserProfile | null;
+  editTrack?: Track | null;
 }
 
 type ValidationErrors = {
   audio?: string;
   cover?: string;
   title?: string;
+  artist?: string;
 };
 
-export default function UploadModal({ isOpen, onClose, onUpload, userProfile }: UploadModalProps) {
+export default function UploadModal({ isOpen, onClose, onUpload, onUpdate, userProfile, editTrack }: UploadModalProps) {
+  const isEditing = !!editTrack;
   const [dragActive, setDragActive] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadPhase, setUploadPhase] = useState<'preflight' | 'cover' | 'audio' | 'saving'>('preflight');
-  const [step, setStep] = useState<'upload' | 'details'>('upload');
+
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [errorDetail, setErrorDetail] = useState<string | null>(null);
   const [shake, setShake] = useState(false);
@@ -31,16 +35,31 @@ export default function UploadModal({ isOpen, onClose, onUpload, userProfile }: 
   
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [coverFile, setCoverFile] = useState<File | null>(null);
-  const [title, setTitle] = useState('');
-  const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [title, setTitle] = useState(editTrack?.title || '');
+  const [artist, setArtist] = useState(editTrack?.artist || '');
+  const [coverPreview, setCoverPreview] = useState<string | null>(editTrack?.coverUrl || null);
+
+  // If editing, skip the audio upload step
+  const [step, setStep] = useState<'upload' | 'details'>(isEditing ? 'details' : 'upload');
 
   const audioInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editTrack) {
+      setTitle(editTrack.title);
+      setCoverPreview(editTrack.coverUrl);
+      setStep('details');
+    }
+  }, [editTrack]);
 
   // Clear field-level error when user fixes it
   useEffect(() => {
     if (title && validationErrors.title) setValidationErrors(prev => ({ ...prev, title: undefined }));
   }, [title]);
+  useEffect(() => {
+    if (artist && validationErrors.artist) setValidationErrors(prev => ({ ...prev, artist: undefined }));
+  }, [artist]);
   useEffect(() => {
     if (coverFile && validationErrors.cover) setValidationErrors(prev => ({ ...prev, cover: undefined }));
   }, [coverFile]);
@@ -76,9 +95,10 @@ export default function UploadModal({ isOpen, onClose, onUpload, userProfile }: 
   const handlePublish = async () => {
     // Validation
     const errors: ValidationErrors = {};
-    if (!audioFile) errors.audio = 'Audio file is required';
-    if (!coverFile) errors.cover = 'Cover image is required';
+    if (!isEditing && !audioFile) errors.audio = 'Audio file is required';
+    if (!isEditing && !coverFile) errors.cover = 'Cover image is required';
     if (!title.trim()) errors.title = 'Title is required';
+    if (!artist.trim()) errors.artist = 'Artist name is required';
 
     if (Object.keys(errors).length > 0) {
       setValidationErrors(errors);
@@ -109,48 +129,78 @@ export default function UploadModal({ isOpen, onClose, onUpload, userProfile }: 
       const timestamp = Date.now();
       const userId = user.id;
 
-      // Upload Cover
-      setUploadPhase('cover');
-      setUploadProgress(10);
-      const coverExt = coverFile!.name.split('.').pop() || 'jpg';
-      const coverPath = `${userId}/${timestamp}-cover.${coverExt}`;
-      const { error: coverError } = await supabase.storage.from('songs').upload(coverPath, coverFile!, { upsert: true });
-      if (coverError) throw coverError;
-      setUploadProgress(40);
+      if (isEditing && onUpdate && editTrack) {
+        // Edit Mode Pipeline
+        setUploadPhase('saving');
+        setUploadProgress(20);
+        
+        let newCoverUrl = editTrack.coverUrl;
+        let newCoverPath = editTrack.coverPath;
 
-      // Upload Audio
-      setUploadPhase('audio');
-      setUploadProgress(45);
-      const audioExt = audioFile!.name.split('.').pop() || 'mp3';
-      const audioPath = `${userId}/${timestamp}-audio.${audioExt}`;
-      const { error: audioError } = await supabase.storage.from('songs').upload(audioPath, audioFile!, { upsert: true });
-      if (audioError) throw audioError;
-      setUploadProgress(85);
+        if (coverFile) {
+          setUploadPhase('cover');
+          setUploadProgress(40);
+          const coverExt = coverFile.name.split('.').pop() || 'jpg';
+          newCoverPath = `${userId}/${timestamp}-cover.${coverExt}`;
+          const { error: coverError } = await supabase.storage.from('songs').upload(newCoverPath, coverFile, { upsert: true });
+          if (coverError) throw coverError;
+          newCoverUrl = supabase.storage.from('songs').getPublicUrl(newCoverPath).data.publicUrl;
+        }
 
-      // Get Public URLs
-      const coverUrl = supabase.storage.from('songs').getPublicUrl(coverPath).data.publicUrl;
-      const audioUrl = supabase.storage.from('songs').getPublicUrl(audioPath).data.publicUrl;
+        setUploadPhase('saving');
+        setUploadProgress(80);
 
-      // Step 3: Save to Database
-      setUploadPhase('saving');
-      setUploadProgress(92);
+        await onUpdate({
+          title: title.trim(),
+          artist: artist.trim(),
+          ...(coverFile ? { coverUrl: newCoverUrl, coverPath: newCoverPath } : {}),
+        });
 
-      const isVideo = audioFile!.type.startsWith('video/');
-      
-      const newTrack: Omit<Track, 'id'> = {
-        title: title.trim(),
-        artist: uploaderName,
-        album: 'Akamo Upload',
-        coverUrl,
-        audioUrl,
-        coverPath,
-        audioPath,
-        duration: 240, 
-        type: isVideo ? 'video' : 'audio',
-        uploadedAt: timestamp,
-      };
+      } else {
+        // Create Mode Pipeline
+        setUploadPhase('cover');
+        setUploadProgress(10);
+        const coverExt = coverFile!.name.split('.').pop() || 'jpg';
+        const coverPath = `${userId}/${timestamp}-cover.${coverExt}`;
+        const { error: coverError } = await supabase.storage.from('songs').upload(coverPath, coverFile!, { upsert: true });
+        if (coverError) throw coverError;
+        setUploadProgress(40);
 
-      await onUpload(newTrack);
+        // Upload Audio
+        setUploadPhase('audio');
+        setUploadProgress(45);
+        const audioExt = audioFile!.name.split('.').pop() || 'mp3';
+        const audioPath = `${userId}/${timestamp}-audio.${audioExt}`;
+        const { error: audioError } = await supabase.storage.from('songs').upload(audioPath, audioFile!, { upsert: true });
+        if (audioError) throw audioError;
+        setUploadProgress(85);
+
+        // Get Public URLs
+        const coverUrl = supabase.storage.from('songs').getPublicUrl(coverPath).data.publicUrl;
+        const audioUrl = supabase.storage.from('songs').getPublicUrl(audioPath).data.publicUrl;
+
+        // Step 3: Save to Database
+        setUploadPhase('saving');
+        setUploadProgress(92);
+
+        const isVideo = audioFile!.type.startsWith('video/');
+        
+        const newTrack: Omit<Track, 'id'> = {
+          title: title.trim(),
+          artist: artist.trim(),
+          album: 'Akamo Upload',
+          coverUrl,
+          audioUrl,
+          coverPath,
+          audioPath,
+          duration: 240, 
+          type: isVideo ? 'video' : 'audio',
+          uploadedAt: timestamp,
+        };
+
+        await onUpload(newTrack);
+      }
+
       setUploadProgress(100);
       setUploading(false);
       setSuccess(true);
@@ -232,8 +282,12 @@ export default function UploadModal({ isOpen, onClose, onUpload, userProfile }: 
             </button>
 
             <div className="relative z-10 text-center mb-8">
-              <h2 className="text-3xl md:text-4xl font-bold mb-2 tracking-tighter text-spotify-text">Publish Sound</h2>
-              <p className="text-spotify-text-muted opacity-60 font-medium text-sm">Broadcast your frequency to the global network.</p>
+              <h2 className="text-3xl md:text-4xl font-bold mb-2 tracking-tighter text-spotify-text">
+                {isEditing ? 'Edit Sound' : 'Publish Sound'}
+              </h2>
+              <p className="text-spotify-text-muted opacity-60 font-medium text-sm">
+                {isEditing ? 'Update your track details.' : 'Broadcast your frequency to the global network.'}
+              </p>
             </div>
 
             {/* Error Banner */}
@@ -332,13 +386,15 @@ export default function UploadModal({ isOpen, onClose, onUpload, userProfile }: 
                         onChange={(e) => e.target.files?.[0] && handleCoverSelect(e.target.files[0])}
                       />
                     </div>
-                    <div className="p-4 liquid-glass rounded-2xl border border-white/5 overflow-hidden">
-                       <span className="block text-[10px] font-bold text-spotify-text-muted uppercase tracking-widest mb-2">Selected File</span>
-                       <div className="flex items-center gap-3">
-                          <Music size={16} className="text-spotify-green" />
-                          <span className="text-xs text-spotify-text font-medium truncate">{audioFile?.name}</span>
-                       </div>
-                    </div>
+                    {!isEditing && (
+                      <div className="p-4 liquid-glass rounded-2xl border border-white/5 overflow-hidden">
+                         <span className="block text-[10px] font-bold text-spotify-text-muted uppercase tracking-widest mb-2">Selected File</span>
+                         <div className="flex items-center gap-3">
+                            <Music size={16} className="text-spotify-green" />
+                            <span className="text-xs text-spotify-text font-medium truncate">{audioFile?.name}</span>
+                         </div>
+                      </div>
+                    )}
                   </div>
 
                   <div className="col-span-1 md:col-span-3 space-y-4 md:space-y-6">
@@ -361,19 +417,42 @@ export default function UploadModal({ isOpen, onClose, onUpload, userProfile }: 
                         )}
                       </div>
 
-                      {/* Uploading as — read-only identity pill */}
+                      {/* Artist Name Input */}
                       <div>
-                        <label className="block text-[10px] font-bold text-spotify-text-muted uppercase tracking-widest mb-2 ml-4">Publishing As</label>
+                        <label className="block text-[10px] font-bold text-spotify-text-muted uppercase tracking-widest mb-2 ml-4">Artist Name <span className="text-red-500">*</span></label>
+                        <input 
+                          type="text"
+                          value={artist}
+                          onChange={(e) => setArtist(e.target.value)}
+                          placeholder="Who created this?"
+                          className={`w-full h-14 bg-white/5 rounded-2xl px-6 text-spotify-text focus:outline-none focus:ring-2 border transition-all ${
+                            validationErrors.artist ? 'border-red-500/50 focus:ring-red-500/30' : 'border-white/5 focus:ring-spotify-green/20'
+                          }`}
+                        />
+                        {validationErrors.artist && (
+                          <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+                            className="text-[10px] text-red-400 font-bold mt-1.5 ml-4 uppercase tracking-widest"
+                          >{validationErrors.artist}</motion.p>
+                        )}
+                      </div>
+
+                      {/* Uploading as / Editing Identity */}
+                      <div>
+                        <label className="block text-[10px] font-bold text-spotify-text-muted uppercase tracking-widest mb-2 ml-4">
+                          {isEditing ? 'Original Publisher' : 'Publishing As'}
+                        </label>
                         <div className="w-full h-14 bg-white/[0.03] rounded-2xl px-6 flex items-center gap-3 border border-white/5">
                           <div className="w-8 h-8 rounded-full bg-spotify-green/20 flex items-center justify-center flex-shrink-0">
-                            {userProfile?.avatar_url ? (
+                            {userProfile?.avatar_url && !isEditing ? (
                               <img src={userProfile.avatar_url} alt="" className="w-full h-full rounded-full object-cover" />
                             ) : (
                               <UserIcon size={14} className="text-spotify-green" />
                             )}
                           </div>
-                          <span className="text-sm text-spotify-text font-medium truncate">{uploaderName}</span>
-                          <span className="ml-auto text-[9px] text-spotify-text-muted uppercase tracking-widest font-bold opacity-40">Auto</span>
+                          <span className="text-sm text-spotify-text font-medium truncate">
+                            {isEditing ? editTrack?.artist : uploaderName}
+                          </span>
+                          <span className="ml-auto text-[9px] text-spotify-text-muted uppercase tracking-widest font-bold opacity-40">Read Only</span>
                         </div>
                       </div>
                     </div>
@@ -398,7 +477,7 @@ export default function UploadModal({ isOpen, onClose, onUpload, userProfile }: 
                       )}
 
                       <button 
-                         disabled={uploading || success || !title.trim() || !audioFile || !coverFile}
+                         disabled={uploading || success || !title.trim() || !artist.trim() || (!isEditing && (!audioFile || !coverFile))}
                          onClick={handlePublish}
                          className="w-full h-14 md:h-16 bg-spotify-green text-black font-black text-xs uppercase tracking-[0.2em] rounded-2xl accent-glow disabled:opacity-50 disabled:grayscale disabled:cursor-not-allowed transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3"
                       >
@@ -413,14 +492,14 @@ export default function UploadModal({ isOpen, onClose, onUpload, userProfile }: 
                              <span>Mission Success</span>
                            </>
                          ) : (
-                           <span>Publish Frequency</span>
+                           <span>{isEditing ? 'Save Changes' : 'Publish Frequency'}</span>
                          )}
                       </button>
                       <button 
                         onClick={!uploading ? resetForm : undefined}
                         className={`w-full text-xs font-bold text-spotify-text-muted hover:text-white transition-colors ${uploading ? 'opacity-30 cursor-not-allowed' : ''}`}
                       >
-                        Cancel Transmission
+                        {isEditing ? 'Cancel Edit' : 'Cancel Transmission'}
                       </button>
                     </div>
                   </div>

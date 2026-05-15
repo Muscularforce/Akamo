@@ -1,4 +1,4 @@
-import { Play, MoreHorizontal, Heart, Trash2 } from 'lucide-react';
+import { Play, MoreHorizontal, Heart, Trash2, Edit3 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
@@ -11,10 +11,11 @@ interface TrackCardProps {
   isActive: boolean;
   onPlay: (track: Track) => void;
   onDelete?: (track: Track) => void;
+  onEdit?: (track: Track) => void;
   user?: User | null;
 }
 
-export default function TrackCard({ track, isActive, onPlay, onDelete, user }: TrackCardProps) {
+export default function TrackCard({ track, isActive, onPlay, onDelete, onEdit, user }: TrackCardProps) {
   const isCreator = isFounder(track.ownerEmail);
   const canDelete = user && (track.ownerId === user.id || isFounder(user.email));
   const [menuOpen, setMenuOpen] = useState(false);
@@ -124,6 +125,20 @@ export default function TrackCard({ track, isActive, onPlay, onDelete, user }: T
               <Heart size={16} className="text-white/50" />
               <span>Save to Liked</span>
             </button>
+
+            {canDelete && onEdit && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setMenuOpen(false);
+                  onEdit(track);
+                }}
+                className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-spotify-text hover:bg-white/10 transition-colors font-medium"
+              >
+                <Edit3 size={16} />
+                <span>Edit Track</span>
+              </button>
+            )}
 
             {canDelete && onDelete && (
               <button

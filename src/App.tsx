@@ -25,6 +25,7 @@ export default function App() {
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [editingTrack, setEditingTrack] = useState<Track | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [user, setUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -221,14 +222,40 @@ export default function App() {
     }
   };
 
+  const handleEditTrack = (track: Track) => {
+    setEditingTrack(track);
+  };
+
+  const handleUpdateTrack = async (updatedTrack: Partial<Track>) => {
+    if (!user || !editingTrack) throw new Error('Cannot update track.');
+    try {
+      const { error } = await supabase
+        .from('tracks')
+        .update(updatedTrack)
+        .eq('id', editingTrack.id);
+        
+      if (error) throw error;
+      
+      // Update local state immediately for snappy UI
+      setTracks(prev => prev.map(t => t.id === editingTrack.id ? { ...t, ...updatedTrack } : t));
+      if (currentTrack?.id === editingTrack.id) {
+        setCurrentTrack(prev => prev ? { ...prev, ...updatedTrack } : null);
+      }
+      setEditingTrack(null);
+    } catch (error: any) {
+      console.error("Error updating track:", error);
+      throw new Error(error.message || 'Failed to update track. Please try again.');
+    }
+  };
+
   const renderContent = () => {
     switch (currentView) {
       case 'explore':
         return <ExploreView tracks={filteredTracks} onPlay={handlePlay} />;
       case 'library':
-        return <LibraryView tracks={filteredTracks} onPlay={handlePlay} onUploadClick={handleUploadClick} onDelete={handleDeleteTrack} user={user} />;
+        return <LibraryView tracks={filteredTracks} onPlay={handlePlay} onUploadClick={handleUploadClick} onDelete={handleDeleteTrack} onEdit={handleEditTrack} user={user} />;
       case 'favorites':
-        return <LibraryView tracks={filteredTracks.slice(0, 3)} onPlay={handlePlay} onUploadClick={handleUploadClick} onDelete={handleDeleteTrack} user={user} />;
+        return <LibraryView tracks={filteredTracks.slice(0, 3)} onPlay={handlePlay} onUploadClick={handleUploadClick} onDelete={handleDeleteTrack} onEdit={handleEditTrack} user={user} />;
       case 'account':
         return user && userProfile ? (
           <AccountSettings
@@ -304,6 +331,7 @@ export default function App() {
                       isActive={currentTrack?.id === track.id}
                       onPlay={handlePlay}
                       onDelete={handleDeleteTrack}
+                      onEdit={handleEditTrack}
                       user={user}
                     />
                   ))}
@@ -376,12 +404,14 @@ export default function App() {
       </div>
 
       <AnimatePresence>
-        {isUploadModalOpen && (
+        {(isUploadModalOpen || editingTrack) && (
           <UploadModal 
-            isOpen={isUploadModalOpen} 
-            onClose={() => setIsUploadModalOpen(false)} 
+            isOpen={isUploadModalOpen || !!editingTrack} 
+            onClose={() => { setIsUploadModalOpen(false); setEditingTrack(null); }} 
             onUpload={handleUpload}
+            onUpdate={handleUpdateTrack}
             userProfile={userProfile}
+            editTrack={editingTrack}
           />
         )}
       </AnimatePresence>

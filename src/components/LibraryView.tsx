@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'motion/react';
-import { Music, Plus, ListMusic, Clock, Filter, Trash2, Heart, MoreHorizontal } from 'lucide-react';
+import { Music, Plus, ListMusic, Clock, Filter, Trash2, Heart, MoreHorizontal, Edit3 } from 'lucide-react';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Track } from '../types';
@@ -11,10 +11,11 @@ interface LibraryViewProps {
   tracks: Track[];
   onUploadClick: () => void;
   onDelete?: (track: Track) => void;
+  onEdit?: (track: Track) => void;
   user?: User | null;
 }
 
-function TrackRowMenu({ track, user, onDelete }: { track: Track; user?: User | null; onDelete?: (track: Track) => void }) {
+function TrackRowMenu({ track, user, onDelete, onEdit }: { track: Track; user?: User | null; onDelete?: (track: Track) => void; onEdit?: (track: Track) => void }) {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -81,6 +82,20 @@ function TrackRowMenu({ track, user, onDelete }: { track: Track; user?: User | n
               <span>Save to Liked</span>
             </button>
 
+            {canDelete && onEdit && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setOpen(false);
+                  onEdit(track);
+                }}
+                className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-spotify-text hover:bg-white/10 transition-colors font-medium"
+              >
+                <Edit3 size={16} />
+                <span>Edit Track</span>
+              </button>
+            )}
+
             {canDelete && onDelete && (
               <button
                 onClick={(e) => {
@@ -102,7 +117,7 @@ function TrackRowMenu({ track, user, onDelete }: { track: Track; user?: User | n
   );
 }
 
-export default function LibraryView({ onPlay, tracks, onUploadClick, onDelete, user }: LibraryViewProps) {
+export default function LibraryView({ onPlay, tracks, onUploadClick, onDelete, onEdit, user }: LibraryViewProps) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -169,7 +184,7 @@ export default function LibraryView({ onPlay, tracks, onUploadClick, onDelete, u
                           {new Date(track.uploadedAt).toLocaleDateString()}
                       </div>
                   </div>
-                  <TrackRowMenu track={track} user={user} onDelete={onDelete} />
+                  <TrackRowMenu track={track} user={user} onDelete={onDelete} onEdit={onEdit} />
               </motion.div>
           ))}
       </div>
