@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useComingSoon } from './components/ComingSoonToast';
 import { Play } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import Player from './components/Player';
@@ -17,6 +18,7 @@ import { Track, View, UserProfile } from './types';
 import { supabase, fetchProfile } from './lib/supabase';
 import { User } from '@supabase/supabase-js';
 import { isFounder, isOwner } from './constants';
+import { ComingSoonProvider } from './components/ComingSoonToast';
 
 export default function App() {
   const [tracks, setTracks] = useState<Track[]>([]);
@@ -31,6 +33,7 @@ export default function App() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const hasSetInitialTrack = useRef(false);
   const userRef = useRef<User | null>(null);
+  const { triggerComingSoon } = useComingSoon();
 
   const filteredTracks = useMemo(() => {
     if (!searchQuery) return tracks;
@@ -278,7 +281,7 @@ export default function App() {
             </h1>
             
             {!searchQuery && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
+              <div className="mobile-quick-cards grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-12 md:mb-16">
                 {tracks.slice(0, 6).map((track, i) => (
                   <motion.div
                     key={track.id}
@@ -286,7 +289,7 @@ export default function App() {
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: i * 0.05 + 0.2, duration: 0.5 }}
                     whileHover={{ y: -5, scale: 1.02 }}
-                    className="liquid-glass group rounded-3xl overflow-hidden flex items-center cursor-pointer p-0 h-24 transition-all hover:shadow-[0_20px_40px_rgba(0,0,0,0.4),0_0_20px_rgba(29,185,84,0.1)]"
+                    className="liquid-glass group rounded-2xl md:rounded-3xl overflow-hidden flex items-center cursor-pointer p-0 h-20 md:h-24 transition-all hover:shadow-[0_20px_40px_rgba(0,0,0,0.4),0_0_20px_rgba(29,185,84,0.1)]"
                     onClick={() => handlePlay(track)}
                   >
                     <div className="h-full aspect-square relative overflow-hidden shrink-0">
@@ -301,7 +304,7 @@ export default function App() {
                          </div>
                       </div>
                     </div>
-                    <div className="flex-1 px-6 py-2 truncate">
+                    <div className="flex-1 px-3 md:px-6 py-2 truncate">
                       <h3 className="font-bold text-base truncate text-spotify-text tracking-tight group-hover:text-spotify-green transition-colors">{track.title}</h3>
                       <p className="text-xs text-spotify-text-muted font-medium opacity-60 mt-1">{track.artist}</p>
                     </div>
@@ -316,13 +319,13 @@ export default function App() {
                   {searchQuery ? 'Found Tracks' : 'Focus'}
                 </h2>
                 {!searchQuery && (
-                  <button className="text-[10px] font-bold text-spotify-text-muted hover:text-spotify-text transition-colors uppercase tracking-widest">
+                  <button onClick={triggerComingSoon} className="text-[10px] font-bold text-spotify-text-muted hover:text-spotify-text transition-colors uppercase tracking-widest">
                     Show all
                   </button>
                 )}
               </div>
               
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-8">
+              <div className="mobile-track-grid grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-8">
                 <AnimatePresence mode="popLayout">
                   {filteredTracks.map((track) => (
                     <TrackCard 
@@ -351,6 +354,7 @@ export default function App() {
   };
 
   return (
+    <ComingSoonProvider>
     <div 
       className="flex h-screen bg-spotify-black overflow-clip relative selection:bg-spotify-green selection:text-black"
       data-theme={theme}
@@ -382,13 +386,13 @@ export default function App() {
           onViewChange={setCurrentView}
         />
         
-        <div className="px-6 md:px-12 py-10">
+        <div className="mobile-content-padding px-4 md:px-12 py-6 md:py-10">
           <AnimatePresence mode="wait">
             {renderContent()}
           </AnimatePresence>
         </div>
 
-        <div className="h-60 md:h-48" /> {/* Spacer for player + mobile nav */}
+        <div className="mobile-bottom-spacer h-60 md:h-48" /> {/* Spacer for player + mobile nav */}
       </main>
 
       <div className="fixed bottom-0 left-0 md:left-72 right-0 z-50">
@@ -431,5 +435,6 @@ export default function App() {
         )}
       </AnimatePresence>
     </div>
+    </ComingSoonProvider>
   );
 }

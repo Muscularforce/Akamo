@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { Track } from '../types';
 import { isFounder } from '../constants';
 import { User } from '@supabase/supabase-js';
+import { useComingSoon } from './ComingSoonToast';
 
 interface TrackCardProps {
   track: Track;
@@ -19,6 +20,7 @@ export default function TrackCard({ track, isActive, onPlay, onDelete, onEdit, u
   const isCreator = isFounder(track.ownerEmail);
   const canDelete = user && (track.ownerId === user.id || isFounder(user.email));
   const [menuOpen, setMenuOpen] = useState(false);
+  const { triggerComingSoon } = useComingSoon();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const [menuPos, setMenuPos] = useState({ top: 0, left: 0 });
@@ -119,7 +121,7 @@ export default function TrackCard({ track, isActive, onPlay, onDelete, onEdit, u
             }}
           >
             <button
-              onClick={(e) => { e.stopPropagation(); setMenuOpen(false); }}
+              onClick={(e) => { e.stopPropagation(); setMenuOpen(false); triggerComingSoon(); }}
               className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-white hover:bg-white/10 transition-colors font-medium"
             >
               <Heart size={16} className="text-white/50" />

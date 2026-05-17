@@ -1,6 +1,7 @@
 import { motion } from 'motion/react';
 import { Search, Compass, Music, Disc, Mic2, Radio } from 'lucide-react';
 import { Track } from '../types';
+import { useComingSoon } from './ComingSoonToast';
 
 interface ExploreViewProps {
   onPlay: (track: Track) => void;
@@ -17,6 +18,7 @@ const categories = [
 ];
 
 export default function ExploreView({ onPlay, tracks }: ExploreViewProps) {
+  const { triggerComingSoon } = useComingSoon();
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -29,7 +31,7 @@ export default function ExploreView({ onPlay, tracks }: ExploreViewProps) {
         <div className="flex items-center justify-between mb-8">
            <h2 className="text-3xl font-bold tracking-tight text-spotify-text">Browse Categories</h2>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-6">
           {categories.map((cat, i) => (
             <motion.div
               key={cat.name}
@@ -38,12 +40,13 @@ export default function ExploreView({ onPlay, tracks }: ExploreViewProps) {
               transition={{ delay: i * 0.05 }}
               whileHover={{ y: -8, scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              className={`relative h-40 rounded-[2rem] overflow-hidden cursor-pointer group bg-gradient-to-br ${cat.color} p-6 shadow-2xl`}
+              className={`relative h-28 md:h-40 rounded-2xl md:rounded-[2rem] overflow-hidden cursor-pointer group bg-gradient-to-br ${cat.color} p-4 md:p-6 shadow-2xl`}
+              onClick={triggerComingSoon}
             >
               <div className="absolute top-4 right-4 opacity-20 group-hover:opacity-40 transition-opacity">
-                <cat.icon size={64} />
+                <cat.icon size={40} className="md:w-16 md:h-16" />
               </div>
-              <h3 className="text-xl font-black text-white relative z-10">{cat.name}</h3>
+              <h3 className="text-base md:text-xl font-black text-white relative z-10">{cat.name}</h3>
             </motion.div>
           ))}
         </div>
@@ -52,9 +55,9 @@ export default function ExploreView({ onPlay, tracks }: ExploreViewProps) {
       <section>
         <div className="flex items-center justify-between mb-8">
            <h2 className="text-2xl font-bold tracking-tight text-spotify-text">Global Charts</h2>
-           <button className="text-xs font-bold text-spotify-text-muted hover:text-spotify-text uppercase tracking-widest transition-colors">See Trending</button>
+           <button onClick={triggerComingSoon} className="text-xs font-bold text-spotify-text-muted hover:text-spotify-text uppercase tracking-widest transition-colors">See Trending</button>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-6">
             {tracks.slice(0, 4).map((track, i) => (
                 <motion.div
                     key={track.id}

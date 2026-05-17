@@ -2,6 +2,7 @@ import { Home, Search, Library, PlusCircle, Heart, Music2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { View } from '../types';
 import { useState } from 'react';
+import { useComingSoon } from './ComingSoonToast';
 
 interface SidebarProps {
   activeView: View;
@@ -16,6 +17,7 @@ const navItems: { icon: any; label: string; view: View }[] = [
 
 export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
   const [logoFailed, setLogoFailed] = useState(false);
+  const { triggerComingSoon } = useComingSoon();
 
   return (
     <div className="w-72 h-full flex flex-col p-8 gap-8 sticky top-0 bg-spotify-black/30 backdrop-blur-3xl border-r border-white/5 transition-all duration-500">
@@ -71,6 +73,7 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
         <div className="space-y-2">
           <motion.div 
               whileHover={{ x: 8 }}
+              onClick={triggerComingSoon}
               className="flex items-center gap-5 px-3 py-2 cursor-pointer text-spotify-text-muted hover:text-spotify-text hover:bg-white/5 rounded-2xl transition-all"
           >
             <div className="p-1">
@@ -93,6 +96,7 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
 
           <motion.div 
               whileHover={{ x: 8 }}
+              onClick={triggerComingSoon}
               className="flex items-center gap-5 px-3 py-2 cursor-pointer text-spotify-text-muted hover:text-spotify-text hover:bg-white/5 rounded-2xl transition-all"
           >
             <Music2 size={22} />
@@ -117,7 +121,7 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
           >+</span>
         </h4>
         <p className="text-[10px] text-spotify-text-muted mb-4 leading-relaxed relative z-10">Unlock spatial audio and advanced equalizers for your journey.</p>
-        <button className="w-full py-2.5 bg-white text-black text-[10px] font-bold rounded-xl hover:scale-105 active:scale-95 transition-all uppercase tracking-widest relative z-10">
+        <button onClick={triggerComingSoon} className="w-full py-2.5 text-black text-[10px] font-bold rounded-xl hover:scale-105 active:scale-95 transition-all uppercase tracking-widest relative z-10" style={{ background: 'var(--accent-gradient)' }}>
           Upgrade Now
         </button>
       </div>

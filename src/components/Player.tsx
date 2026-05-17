@@ -7,6 +7,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Track, UserProfile } from '../types';
 import { isFounder, isOwner } from '../constants';
 import AuroraBadge from './AuroraBadge';
+import { useComingSoon } from './ComingSoonToast';
 
 interface PlayerProps {
   currentTrack: Track | null;
@@ -50,9 +51,11 @@ const ScrollingText = ({ text, className, speed = 30 }: { text: string; classNam
 export default function Player({ currentTrack, isPlaying, onTogglePlay, onNext, onPrev, userProfile }: PlayerProps) {
   const [progress, setProgress] = useState(0);
   const [volume, setVolume] = useState(0.7);
+  const [isLooping, setIsLooping] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   // Use role-based check if profile is available, fall back to email check
   const isCreator = isOwner(userProfile?.role) || isFounder(currentTrack?.ownerEmail);
+  const { triggerComingSoon } = useComingSoon();
 
   useEffect(() => {
     if (audioRef.current) {
@@ -63,6 +66,23 @@ export default function Player({ currentTrack, isPlaying, onTogglePlay, onNext, 
         }
     }
   }, [isPlaying, currentTrack]);
+
+  // Keep loop attribute in sync with state
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.loop = isLooping;
+    }
+  }, [isLooping, currentTrack]);
+
+  const handleToggleLoop = () => {
+    setIsLooping(prev => {
+      const next = !prev;
+      if (audioRef.current) {
+        audioRef.current.loop = next;
+      }
+      return next;
+    });
+  };
 
   const handleTimeUpdate = () => {
     if (audioRef.current) {
@@ -79,6 +99,14 @@ export default function Player({ currentTrack, isPlaying, onTogglePlay, onNext, 
     }
   };
 
+  const handleEnded = () => {
+    // If looping, the audio element handles replay natively via .loop = true
+    // If not looping, advance to the next track
+    if (!isLooping) {
+      onNext();
+    }
+  };
+
   const formatTime = (seconds: number) => {
     if (!seconds) return '0:00';
     const mins = Math.floor(seconds / 60);
@@ -87,13 +115,13 @@ export default function Player({ currentTrack, isPlaying, onTogglePlay, onNext, 
   };
 
   return (
-    <div className="w-full flex justify-center px-4 pb-4 md:pb-6 z-50">
-      <div className="liquid-glass rounded-[2.5rem] px-4 md:px-8 h-20 md:h-24 flex items-center justify-between gap-4 md:gap-8 relative overflow-hidden group/player w-full max-w-6xl">
+    <div className="w-full flex justify-center px-2 md:px-4 pb-2 md:pb-6 z-50">
+      <div className="mobile-player liquid-glass rounded-[1.5rem] md:rounded-[2.5rem] px-3 md:px-8 h-[4.5rem] md:h-24 flex items-center justify-between gap-2 md:gap-8 relative overflow-hidden group/player w-full max-w-6xl">
         {/* Glow behind cover */}
         <div className="absolute left-0 top-0 w-40 h-full bg-spotify-green/10 blur-3xl pointer-events-none" />
         
         {/* Track Info */}
-        <div className="flex items-center gap-3 md:gap-5 w-[35%] md:w-[30%] min-w-0 md:min-w-[240px] relative z-10">
+        <div className="flex items-center gap-2 md:gap-5 w-[30%] md:w-[30%] min-w-0 md:min-w-[240px] relative z-10">
           <AnimatePresence mode="wait">
             {currentTrack ? (
               <motion.div
@@ -101,25 +129,25 @@ export default function Player({ currentTrack, isPlaying, onTogglePlay, onNext, 
                 initial={{ opacity: 0, scale: 0.8, x: -20 }}
                 animate={{ opacity: 1, scale: 1, x: 0 }}
                 exit={{ opacity: 0, scale: 0.8, x: 20 }}
-                className="flex items-center gap-5 w-full"
+                className="flex items-center gap-2 md:gap-5 w-full"
               >
-                <div className="w-16 h-16 rounded-2xl overflow-hidden shadow-[0_10px_30px_rgba(0,0,0,0.5)] flex-shrink-0 group-hover/player:scale-105 transition-transform duration-500 relative"
+                <div className="player-cover w-11 h-11 md:w-16 md:h-16 rounded-xl md:rounded-2xl overflow-hidden shadow-[0_10px_30px_rgba(0,0,0,0.5)] flex-shrink-0 group-hover/player:scale-105 transition-transform duration-500 relative"
                 >
                   <img src={currentTrack.coverUrl} alt={currentTrack.title} className="w-full h-full object-cover" />
                 </div>
                 <div className="flex flex-col flex-1 min-w-0">
                   <ScrollingText 
                     text={currentTrack.title} 
-                    className="text-base font-bold text-spotify-text hover:text-spotify-green transition-colors cursor-pointer tracking-tight" 
+                    className="text-xs md:text-base font-bold text-spotify-text hover:text-spotify-green transition-colors cursor-pointer tracking-tight" 
                   />
                   <div className="flex items-center gap-2 min-w-0">
                     <ScrollingText 
                       text={currentTrack.artist} 
-                      className="text-xs text-spotify-text-muted hover:text-spotify-text transition-colors cursor-pointer opacity-70 tracking-wide font-medium min-w-0" 
+                      className="text-[10px] md:text-xs text-spotify-text-muted hover:text-spotify-text transition-colors cursor-pointer opacity-70 tracking-wide font-medium min-w-0" 
                       speed={20}
                     />
                     {isCreator && (
-                      <div className="flex-shrink-0 flex items-center">
+                      <div className="flex-shrink-0 flex items-center hidden md:flex">
                         <AuroraBadge size="sm" />
                       </div>
                     )}
@@ -127,11 +155,11 @@ export default function Player({ currentTrack, isPlaying, onTogglePlay, onNext, 
                 </div>
               </motion.div>
             ) : (
-              <div className="flex items-center gap-5 opacity-20">
-                 <div className="w-16 h-16 bg-white/10 rounded-2xl" />
+              <div className="flex items-center gap-3 md:gap-5 opacity-20">
+                 <div className="w-11 h-11 md:w-16 md:h-16 bg-white/10 rounded-xl md:rounded-2xl" />
                  <div className="flex flex-col gap-2">
-                   <div className="w-32 h-4 bg-white/10 rounded-full" />
-                   <div className="w-20 h-3 bg-white/10 rounded-full" />
+                   <div className="w-20 md:w-32 h-3 md:h-4 bg-white/10 rounded-full" />
+                   <div className="w-14 md:w-20 h-2 md:h-3 bg-white/10 rounded-full" />
                  </div>
               </div>
             )}
@@ -139,36 +167,47 @@ export default function Player({ currentTrack, isPlaying, onTogglePlay, onNext, 
         </div>
 
         {/* Controls */}
-        <div className="flex flex-col items-center gap-2.5 flex-1 max-w-[500px] relative z-10">
-          <div className="flex items-center gap-8">
-            <button className="text-spotify-text-muted hover:text-spotify-text transition-all scale-90 hover:scale-110 active:scale-95">
+        <div className="flex flex-col items-center gap-1 md:gap-2.5 flex-1 max-w-[500px] relative z-10">
+          <div className="flex items-center gap-3 md:gap-8">
+            <button onClick={triggerComingSoon} className="text-spotify-text-muted hover:text-spotify-text transition-all scale-90 hover:scale-110 active:scale-95 hidden md:flex items-center justify-center">
               <Shuffle size={18} />
             </button>
-            <button onClick={onPrev} className="text-spotify-text-muted hover:text-spotify-text transition-all hover:scale-110 active:scale-90">
-              <SkipBack size={22} className="fill-current" />
+            <button onClick={onPrev} className="text-spotify-text-muted hover:text-spotify-text transition-all hover:scale-110 active:scale-90 flex items-center justify-center">
+              <SkipBack size={18} className="md:w-[22px] md:h-[22px] fill-current" />
             </button>
             <motion.button
               whileHover={{ scale: 1.15, y: -2 }}
               whileTap={{ scale: 0.9 }}
               onClick={onTogglePlay}
-              className="w-14 h-14 bg-white text-black rounded-full flex items-center justify-center hover:bg-spotify-green transition-all shadow-[0_8px_25px_rgba(29,185,84,0.3)] group/play"
+              className="w-10 h-10 md:w-14 md:h-14 bg-white text-black rounded-full flex items-center justify-center hover:bg-spotify-green transition-all shadow-[0_8px_25px_rgba(29,185,84,0.3)] group/play"
             >
               {isPlaying ? (
-                <Pause size={28} className="fill-current" />
+                <Pause size={20} className="md:w-[28px] md:h-[28px] fill-current" />
               ) : (
-                <Play size={28} className="fill-current ml-1" />
+                <Play size={20} className="md:w-[28px] md:h-[28px] fill-current ml-0.5" />
               )}
             </motion.button>
-            <button onClick={onNext} className="text-spotify-text-muted hover:text-spotify-text transition-all hover:scale-110 active:scale-90">
-              <SkipForward size={22} className="fill-current" />
+            <button onClick={onNext} className="text-spotify-text-muted hover:text-spotify-text transition-all hover:scale-110 active:scale-90 flex items-center justify-center">
+              <SkipForward size={18} className="md:w-[22px] md:h-[22px] fill-current" />
             </button>
-            <button className="text-spotify-text-muted hover:text-spotify-text transition-all scale-90 hover:scale-110 active:scale-95">
+            <button 
+              onClick={handleToggleLoop} 
+              className={`transition-all scale-90 hover:scale-110 active:scale-95 hidden md:flex items-center justify-center ${
+                isLooping 
+                  ? 'text-spotify-green drop-shadow-[0_0_8px_rgba(29,185,84,0.6)]' 
+                  : 'text-spotify-text-muted hover:text-spotify-text'
+              }`}
+              title={isLooping ? 'Loop: On' : 'Loop: Off'}
+            >
               <Repeat size={18} />
+              {isLooping && (
+                <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-spotify-green rounded-full" />
+              )}
             </button>
           </div>
 
-          <div className="w-full flex items-center gap-4 group">
-            <span className="text-[10px] text-spotify-text-muted font-bold w-10 text-right tabular-nums opacity-60">
+          <div className="w-full flex items-center gap-2 md:gap-4 group">
+            <span className="text-[9px] md:text-[10px] text-spotify-text-muted font-bold w-6 md:w-10 text-right tabular-nums opacity-60 hidden md:block">
               {audioRef.current ? formatTime(audioRef.current.currentTime) : '0:00'}
             </span>
             <div className="flex-1 relative h-1.5 flex items-center">
@@ -190,22 +229,22 @@ export default function Player({ currentTrack, isPlaying, onTogglePlay, onNext, 
                 </motion.div>
               </div>
             </div>
-            <span className="text-[10px] text-spotify-text-muted font-bold w-10 tabular-nums opacity-60">
+            <span className="text-[9px] md:text-[10px] text-spotify-text-muted font-bold w-6 md:w-10 tabular-nums opacity-60 hidden md:block">
               {currentTrack ? formatTime(currentTrack.duration) : '0:00'}
             </span>
           </div>
         </div>
 
-        {/* Volume & Extras */}
+        {/* Volume & Extras — hidden on mobile */}
         <div className="hidden md:flex items-center justify-end gap-5 w-[30%] min-w-[200px] relative z-10">
           <div className="flex items-center gap-1">
-            <button className="text-spotify-text-muted hover:text-spotify-text hover:bg-white/10 p-2 rounded-full transition-all md:block hidden">
+            <button onClick={triggerComingSoon} className="text-spotify-text-muted hover:text-spotify-text hover:bg-white/10 p-2 rounded-full transition-all md:block hidden">
                 <Mic2 size={16} />
             </button>
-            <button className="text-spotify-text-muted hover:text-spotify-text hover:bg-white/10 p-2 rounded-full transition-all md:block hidden">
+            <button onClick={triggerComingSoon} className="text-spotify-text-muted hover:text-spotify-text hover:bg-white/10 p-2 rounded-full transition-all md:block hidden">
                 <ListMusic size={18} />
             </button>
-            <button className="text-spotify-text-muted hover:text-spotify-text hover:bg-white/10 p-2 rounded-full transition-all md:block hidden">
+            <button onClick={triggerComingSoon} className="text-spotify-text-muted hover:text-spotify-text hover:bg-white/10 p-2 rounded-full transition-all md:block hidden">
                 <Laptop2 size={16} />
             </button>
           </div>
@@ -234,17 +273,29 @@ export default function Player({ currentTrack, isPlaying, onTogglePlay, onNext, 
                   </div>
               </div>
           </div>
-          <button className="text-spotify-text-muted hover:text-spotify-text transition-all hover:scale-110">
+          <button onClick={triggerComingSoon} className="text-spotify-text-muted hover:text-spotify-text transition-all hover:scale-110">
               <Maximize2 size={16} />
           </button>
         </div>
+
+        {/* Mobile-only loop button (visible on small screens) */}
+        <button 
+          onClick={handleToggleLoop} 
+          className={`md:hidden flex items-center justify-center p-2 rounded-full transition-all flex-shrink-0 ${
+            isLooping 
+              ? 'text-spotify-green bg-spotify-green/10' 
+              : 'text-spotify-text-muted'
+          }`}
+        >
+          <Repeat size={16} />
+        </button>
 
         {currentTrack && (
           <audio
             ref={audioRef}
             src={currentTrack.audioUrl}
             onTimeUpdate={handleTimeUpdate}
-            onEnded={onNext}
+            onEnded={handleEnded}
             className="hidden"
           />
         )}

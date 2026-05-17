@@ -6,6 +6,7 @@ import { User } from '@supabase/supabase-js';
 import { isOwner } from '../constants';
 import { UserProfile } from '../types';
 import AuroraBadge from './AuroraBadge';
+import { useComingSoon } from './ComingSoonToast';
 
 interface HeaderProps {
     onUploadClick: () => void;
@@ -26,6 +27,7 @@ export default function Header({ onUploadClick, onLoginClick, currentTheme, onTh
   const profileRef = useRef<HTMLDivElement>(null);
   const [isScrolled, setIsScrolled] = useState(false);
   const isCreator = isOwner(userProfile?.role);
+  const { triggerComingSoon } = useComingSoon();
 
   useEffect(() => {
     const mainElement = document.querySelector('main');
@@ -63,53 +65,60 @@ export default function Header({ onUploadClick, onLoginClick, currentTheme, onTh
   }, []);
 
   return (
-    <header className={`h-20 flex items-center justify-between px-8 sticky top-0 z-40 transition-all duration-500 gap-8 ${isScrolled ? 'bg-spotify-black/60 backdrop-blur-3xl border-b border-white/5 h-20' : 'bg-transparent'}`}>
-      <div className="flex items-center gap-4 shrink-0">
-        <button className="w-10 h-10 rounded-full bg-black/40 flex items-center justify-center text-spotify-text-muted hover:text-spotify-text transition-colors border border-white/5">
+    <header className={`h-16 md:h-20 flex items-center justify-between px-4 md:px-8 sticky top-0 z-40 transition-all duration-500 gap-3 md:gap-8 ${isScrolled ? 'bg-spotify-black/60 backdrop-blur-3xl border-b border-white/5' : 'bg-transparent'}`}>
+      {/* Nav arrows — hidden on mobile */}
+      <div className="hidden md:flex items-center gap-4 shrink-0">
+        <button onClick={triggerComingSoon} className="w-10 h-10 rounded-full bg-black/40 flex items-center justify-center text-spotify-text-muted hover:text-spotify-text transition-colors border border-white/5">
           <ChevronLeft size={24} />
         </button>
-        <button className="w-10 h-10 rounded-full bg-black/40 flex items-center justify-center text-spotify-text-muted hover:text-spotify-text transition-colors border border-white/5">
+        <button onClick={triggerComingSoon} className="w-10 h-10 rounded-full bg-black/40 flex items-center justify-center text-spotify-text-muted hover:text-spotify-text transition-colors border border-white/5">
           <ChevronRight size={24} />
         </button>
       </div>
 
+      {/* Search bar — responsive */}
       <div className="flex-1 max-w-xl group relative">
-        <SearchIcon className="absolute left-5 top-1/2 -translate-y-1/2 text-spotify-text-muted group-focus-within:text-spotify-green transition-colors" size={18} />
+        <SearchIcon className="absolute left-3 md:left-5 top-1/2 -translate-y-1/2 text-spotify-text-muted group-focus-within:text-spotify-green transition-colors" size={16} />
         <input 
             type="text"
-            placeholder="Search audio, assets, or creators..."
+            placeholder="Search..."
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full h-12 bg-white/5 border border-white/5 rounded-2xl px-12 text-sm font-medium text-spotify-text placeholder:text-spotify-text-muted focus:outline-none focus:bg-white/10 focus:border-white/10 transition-all focus:ring-2 focus:ring-spotify-green/20"
+            className="w-full h-10 md:h-12 bg-white/5 border border-white/5 rounded-xl md:rounded-2xl pl-9 md:pl-12 pr-4 md:pr-12 text-sm font-medium text-spotify-text placeholder:text-spotify-text-muted focus:outline-none focus:bg-white/10 focus:border-white/10 transition-all focus:ring-2 focus:ring-spotify-green/20"
         />
-        <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+        {/* Keyboard shortcut — hidden on mobile */}
+        <div className="absolute right-4 top-1/2 -translate-y-1/2 hidden md:flex items-center gap-2">
             <span className="text-[10px] font-bold text-spotify-text-muted bg-white/5 px-2 py-1 rounded border border-white/5">⌘ K</span>
         </div>
       </div>
 
-      <div className="flex items-center gap-6 shrink-0">
+      <div className="flex items-center gap-2 md:gap-6 shrink-0">
         {user ? (
           <>
+            {/* Upload button — uses theme variable for Pink Flamingo support */}
             <motion.button
                 whileHover={{ scale: 1.05, y: -2 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={onUploadClick}
-                className="accent-shimmer flex items-center gap-2 bg-spotify-green text-black px-5 py-2 rounded-full text-[11px] font-bold transition-all accent-glow"
+                className="accent-shimmer flex items-center gap-2 text-black px-3 md:px-5 py-2 rounded-full text-[11px] font-bold transition-all"
+                style={{ background: 'var(--accent-gradient)', boxShadow: 'var(--accent-glow)' }}
             >
                 <Upload size={14} />
-                <span className="uppercase tracking-widest">Upload</span>
+                <span className="uppercase tracking-widest hidden sm:inline">Upload</span>
             </motion.button>
 
-            <button className="text-spotify-text-muted hover:text-spotify-text transition-all p-2 hover:bg-white/5 rounded-full">
+            {/* Bell — now wired to easter egg */}
+            <button onClick={triggerComingSoon} className="text-spotify-text-muted hover:text-spotify-text transition-all p-2 hover:bg-white/5 rounded-full hidden md:flex items-center justify-center">
                 <Bell size={20} />
             </button>
 
+            {/* Settings dropdown */}
             <div className="relative" ref={settingsRef}>
               <button 
                 onClick={() => setIsSettingsOpen(!isSettingsOpen)}
                 className={`text-spotify-text-muted hover:text-spotify-text transition-all p-2 rounded-full ${isSettingsOpen ? 'bg-white/10 text-spotify-text' : 'hover:bg-white/5'}`}
               >
-                <Settings size={20} className={isSettingsOpen ? 'rotate-90 transition-transform duration-500' : 'transition-transform duration-500'} />
+                <Settings size={18} className={isSettingsOpen ? 'rotate-90 transition-transform duration-500' : 'transition-transform duration-500'} />
               </button>
 
               <AnimatePresence>
@@ -142,10 +151,11 @@ export default function Header({ onUploadClick, onLoginClick, currentTheme, onTh
               </AnimatePresence>
             </div>
 
+            {/* Profile dropdown */}
             <div className="relative" ref={profileRef}>
               <button 
                 onClick={() => setIsProfileOpen(!isProfileOpen)}
-                className={`w-10 h-10 rounded-full flex items-center justify-center overflow-hidden hover:scale-105 transition-transform p-0.5 ${
+                className={`w-9 h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center overflow-hidden hover:scale-105 transition-transform p-0.5 ${
                   isCreator ? 'aurora-gradient' : 'liquid-glass'
                 }`}
               >
@@ -156,7 +166,7 @@ export default function Header({ onUploadClick, onLoginClick, currentTheme, onTh
                     <img src={user.user_metadata.avatar_url} alt={user.user_metadata?.full_name || 'User'} className="w-full h-full rounded-full object-cover" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
-                      <UserIcon size={20} className="text-spotify-text-muted" />
+                      <UserIcon size={18} className="text-spotify-text-muted" />
                     </div>
                   )}
                 </div>
@@ -193,7 +203,10 @@ export default function Header({ onUploadClick, onLoginClick, currentTheme, onTh
                     >
                         <span className="group-hover:translate-x-1 transition-transform">Account Settings</span>
                     </button>
-                    <button className="w-full text-left px-4 py-2.5 text-[11px] hover:bg-white/10 rounded-xl transition-all flex items-center justify-between group">
+                    <button 
+                      onClick={() => { setIsProfileOpen(false); triggerComingSoon(); }}
+                      className="w-full text-left px-4 py-2.5 text-[11px] hover:bg-white/10 rounded-xl transition-all flex items-center justify-between group"
+                    >
                         <span className="group-hover:translate-x-1 transition-transform">Profile</span>
                     </button>
                     <div className="h-[1px] bg-white/5 my-2" />
@@ -214,7 +227,7 @@ export default function Header({ onUploadClick, onLoginClick, currentTheme, onTh
             onClick={onLoginClick}
             whileHover={{ scale: 1.05, y: -1 }}
             whileTap={{ scale: 0.95 }}
-            className="relative overflow-hidden text-black px-7 py-2.5 rounded-full text-[11px] font-bold tracking-widest uppercase accent-shimmer"
+            className="relative overflow-hidden text-black px-5 md:px-7 py-2.5 rounded-full text-[11px] font-bold tracking-widest uppercase accent-shimmer"
             style={{ background: 'var(--accent-gradient)', boxShadow: '0 4px 20px rgba(29, 185, 84, 0.3)' }}
           >
             Login
