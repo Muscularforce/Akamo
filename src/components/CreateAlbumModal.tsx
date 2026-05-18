@@ -212,7 +212,7 @@ export default function CreateAlbumModal({ isOpen, onClose, onCreate, tracks }: 
                   <div className="flex items-start gap-5">
                     <div
                       onClick={() => coverInputRef.current?.click()}
-                      className={`w-32 h-32 md:w-36 md:h-36 rounded-2xl overflow-hidden cursor-pointer group flex-shrink-0 transition-all border ${
+                      className={`relative w-32 h-32 md:w-36 md:h-36 rounded-2xl overflow-hidden cursor-pointer group flex-shrink-0 transition-all border ${
                         errors.cover ? 'border-red-500/50 ring-1 ring-red-500/30' : 'border-white/10'
                       } bg-white/5`}
                     >
