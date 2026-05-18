@@ -1,4 +1,5 @@
-export type View = 'home' | 'explore' | 'library' | 'favorites' | 'auth' | 'verified' | 'account';
+export type View = 'home' | 'explore' | 'library' | 'favorites' | 'auth' | 'verified' | 'account'
+  | 'albums' | 'album-detail' | 'playlists' | 'playlist-detail';
 
 export interface UserProfile {
   id: string;
@@ -23,6 +24,49 @@ export interface Track {
   ownerId?: string;
   ownerEmail?: string;
   localId?: string;
+  albumId?: string;
+}
+
+export interface Album {
+  id: string;
+  title: string;
+  artist: string;
+  year: number;
+  genre?: string;
+  coverUrl?: string;
+  coverPath?: string;
+  ownerId?: string;
+  createdAt?: string;
+}
+
+export interface AlbumTrack {
+  id: string;
+  albumId: string;
+  trackId: string;
+  trackNumber: number;
+  track?: Track; // joined
+}
+
+export interface PlaylistMeta {
+  id: string;
+  title: string;
+  description: string;
+  coverUrl?: string;
+  coverPath?: string;
+  ownerId: string;
+  isPublic: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PlaylistTrack {
+  id: string;
+  playlistId: string;
+  trackId: string;
+  position: number;
+  addedAt: string;
+  addedBy?: string;
+  track?: Track; // joined
 }
 
 export interface Playlist {
@@ -30,4 +74,18 @@ export interface Playlist {
   name: string;
   coverUrl: string;
   tracks: Track[];
+}
+
+/**
+ * Playback context — tells the Player what queue it's currently playing from.
+ */
+export interface PlaybackContext {
+  type: 'album' | 'playlist' | 'library' | 'single';
+  id?: string;
+  name?: string;
+  tracks: Track[];
+  currentIndex: number;
+  isShuffled: boolean;
+  /** The original (unshuffled) order, so we can un-shuffle. */
+  originalOrder?: Track[];
 }

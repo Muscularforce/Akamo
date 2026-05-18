@@ -1,4 +1,4 @@
-import { Home, Search, Library, PlusCircle, Heart, Music2 } from 'lucide-react';
+import { Home, Search, Library, PlusCircle, Heart, Music2, Disc3, ListMusic } from 'lucide-react';
 import { motion } from 'motion/react';
 import { View } from '../types';
 import { useState } from 'react';
@@ -7,34 +7,37 @@ import { useComingSoon } from './ComingSoonToast';
 interface SidebarProps {
   activeView: View;
   onViewChange: (view: View) => void;
+  onCreatePlaylist?: () => void;
 }
 
 const navItems: { icon: any; label: string; view: View }[] = [
   { icon: Home, label: 'Home', view: 'home' },
   { icon: Search, label: 'Explore', view: 'explore' },
   { icon: Library, label: 'Library', view: 'library' },
+  { icon: Disc3, label: 'Albums', view: 'albums' },
+  { icon: ListMusic, label: 'Playlists', view: 'playlists' },
 ];
 
-export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
+export default function Sidebar({ activeView, onViewChange, onCreatePlaylist }: SidebarProps) {
   const [logoFailed, setLogoFailed] = useState(false);
   const { triggerComingSoon } = useComingSoon();
 
   return (
     <div className="w-72 h-full flex flex-col p-8 gap-8 sticky top-0 bg-spotify-black/30 backdrop-blur-3xl border-r border-white/5 transition-all duration-500">
-      <div 
+      <div
         className="flex items-center gap-4 px-2 group cursor-pointer transition-all duration-300"
         onClick={() => onViewChange('home')}
       >
         {!logoFailed ? (
-          <img 
-            src="/logo.png" 
-            alt="Akamo Logo" 
+          <img
+            src="/logo.png"
+            alt="Akamo Logo"
             className="h-10 w-auto object-contain"
             onError={() => setLogoFailed(true)}
           />
         ) : (
           <div className="flex items-center gap-4">
-             <div 
+             <div
               className="w-10 h-10 rounded-2xl flex items-center justify-center shadow-2xl transition-all duration-500 accent-glow"
               style={{ background: 'var(--accent-gradient)' }}
             >
@@ -49,7 +52,9 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
         <p className="text-[10px] font-bold text-spotify-text-muted uppercase tracking-[0.2em] px-2 mb-1">Menu</p>
         <div className="space-y-2">
           {navItems.map((item) => {
-            const isActive = activeView === item.view;
+            const isActive = activeView === item.view
+              || (item.view === 'albums' && activeView === 'album-detail')
+              || (item.view === 'playlists' && activeView === 'playlist-detail');
             return (
               <motion.div
                 key={item.label}
@@ -71,9 +76,9 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
       <div className="flex flex-col gap-4">
         <p className="text-[10px] font-bold text-spotify-text-muted uppercase tracking-[0.2em] px-2 mb-1">Collection</p>
         <div className="space-y-2">
-          <motion.div 
+          <motion.div
               whileHover={{ x: 8 }}
-              onClick={triggerComingSoon}
+              onClick={onCreatePlaylist || triggerComingSoon}
               className="flex items-center gap-5 px-3 py-2 cursor-pointer text-spotify-text-muted hover:text-spotify-text hover:bg-white/5 rounded-2xl transition-all"
           >
             <div className="p-1">
@@ -81,8 +86,8 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
             </div>
             <span className="text-sm font-medium tracking-wide">Create Playlist</span>
           </motion.div>
-          
-          <motion.div 
+
+          <motion.div
               whileHover={{ x: 8 }}
               onClick={() => onViewChange('favorites')}
               className={`flex items-center gap-5 px-3 py-2 cursor-pointer transition-all rounded-2xl ${
@@ -94,7 +99,7 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
             {activeView === 'favorites' && <motion.div layoutId="active-pill" className="ml-auto w-1.5 h-1.5 rounded-full bg-spotify-green accent-glow" />}
           </motion.div>
 
-          <motion.div 
+          <motion.div
               whileHover={{ x: 8 }}
               onClick={triggerComingSoon}
               className="flex items-center gap-5 px-3 py-2 cursor-pointer text-spotify-text-muted hover:text-spotify-text hover:bg-white/5 rounded-2xl transition-all"

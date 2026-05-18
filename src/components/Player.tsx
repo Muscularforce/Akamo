@@ -4,10 +4,11 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import React, { useState, useRef, useEffect } from 'react';
-import { Track, UserProfile } from '../types';
+import { Track, UserProfile, PlaybackContext } from '../types';
 import { isFounder, isOwner } from '../constants';
 import AuroraBadge from './AuroraBadge';
 import { useComingSoon } from './ComingSoonToast';
+import { supabase } from '../lib/supabase';
 
 interface PlayerProps {
   currentTrack: Track | null;
@@ -16,6 +17,7 @@ interface PlayerProps {
   onNext: () => void;
   onPrev: () => void;
   userProfile?: UserProfile | null;
+  playbackContext?: PlaybackContext | null;
 }
 
 const ScrollingText = ({ text, className, speed = 30 }: { text: string; className: string; speed?: number }) => {
@@ -48,14 +50,38 @@ const ScrollingText = ({ text, className, speed = 30 }: { text: string; classNam
   );
 };
 
-export default function Player({ currentTrack, isPlaying, onTogglePlay, onNext, onPrev, userProfile }: PlayerProps) {
+export default function Player({ currentTrack, isPlaying, onTogglePlay, onNext, onPrev, userProfile, playbackContext }: PlayerProps) {
   const [progress, setProgress] = useState(0);
   const [volume, setVolume] = useState(0.7);
   const [isLooping, setIsLooping] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  // Use role-based check if profile is available, fall back to email check
-  const isCreator = isOwner(userProfile?.role) || isFounder(currentTrack?.ownerEmail);
+  // Check if the track's uploader is the founder
+  const isCreator = isFounder(currentTrack?.ownerEmail);
   const { triggerComingSoon } = useComingSoon();
+  const [uploaderName, setUploaderName] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!currentTrack?.ownerId) {
+      setUploaderName(currentTrack?.ownerEmail ? currentTrack.ownerEmail.split('@')[0] : null);
+      return;
+    }
+    const fetchUploader = async () => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('display_name')
+        .eq('id', currentTrack.ownerId)
+        .single();
+      
+      if (data && data.display_name) {
+        setUploaderName(data.display_name);
+      } else if (currentTrack.ownerEmail) {
+        setUploaderName(currentTrack.ownerEmail.split('@')[0]);
+      } else {
+        setUploaderName(null);
+      }
+    };
+    fetchUploader();
+  }, [currentTrack]);
 
   useEffect(() => {
     if (audioRef.current) {
@@ -140,18 +166,30 @@ export default function Player({ currentTrack, isPlaying, onTogglePlay, onNext, 
                     text={currentTrack.title} 
                     className="text-xs md:text-base font-bold text-spotify-text hover:text-spotify-green transition-colors cursor-pointer tracking-tight" 
                   />
-                  <div className="flex items-center gap-2 min-w-0">
-                    <ScrollingText 
-                      text={currentTrack.artist} 
-                      className="text-[10px] md:text-xs text-spotify-text-muted hover:text-spotify-text transition-colors cursor-pointer opacity-70 tracking-wide font-medium min-w-0" 
-                      speed={20}
-                    />
-                    {isCreator && (
-                      <div className="flex-shrink-0 flex items-center hidden md:flex">
-                        <AuroraBadge size="sm" />
-                      </div>
+                  <div className="flex flex-col min-w-0">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <ScrollingText 
+                        text={currentTrack.artist} 
+                        className="text-[10px] md:text-xs text-spotify-text-muted hover:text-spotify-text transition-colors cursor-pointer opacity-70 tracking-wide font-medium min-w-0" 
+                        speed={20}
+                      />
+                      {isCreator && (
+                        <div className="flex-shrink-0 flex items-center hidden md:flex">
+                          <AuroraBadge size="sm" />
+                        </div>
+                      )}
+                    </div>
+                    {uploaderName && (
+                      <p className="text-[8px] md:text-[9px] text-spotify-text-muted opacity-60 font-medium truncate mt-0.5 hidden md:block">
+                        Uploaded by <span className={isCreator ? 'aurora-text font-bold tracking-wide drop-shadow-md' : ''}>{uploaderName}</span>
+                      </p>
                     )}
                   </div>
+                  {playbackContext?.name && (playbackContext.type === 'album' || playbackContext.type === 'playlist') && (
+                    <p className="text-[8px] md:text-[9px] text-spotify-text-muted opacity-50 font-medium truncate mt-0.5 hidden md:block">
+                      From: <span className="text-spotify-green/80">{playbackContext.name}</span>
+                    </p>
+                  )}
                 </div>
               </motion.div>
             ) : (

@@ -1,5 +1,6 @@
-import { motion } from 'motion/react';
-import { Crown } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Crown, Shield } from 'lucide-react';
+import { useState } from 'react';
 
 interface AuroraBadgeProps {
   size?: 'sm' | 'md' | 'lg';
@@ -17,6 +18,8 @@ interface AuroraBadgeProps {
  *   lg  → profile page hero (future)
  */
 export default function AuroraBadge({ size = 'sm', showLabel = true, showTitle = false }: AuroraBadgeProps) {
+  const [showTooltip, setShowTooltip] = useState(false);
+
   const sizeClasses = {
     sm: 'h-[18px] gap-[3px] px-[6px] text-[8px]',
     md: 'h-[22px] gap-1 px-2 text-[9px]',
@@ -30,10 +33,13 @@ export default function AuroraBadge({ size = 'sm', showLabel = true, showTitle =
       initial={{ opacity: 0, scale: 0.6 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ type: 'spring', stiffness: 400, damping: 15, delay: 0.2 }}
-      className="inline-flex items-center gap-1 flex-shrink-0 align-middle"
+      className="inline-flex items-center gap-1 flex-shrink-0 align-middle relative"
+      onMouseEnter={() => setShowTooltip(true)}
+      onMouseLeave={() => setShowTooltip(false)}
+      onClick={(e) => { e.stopPropagation(); setShowTooltip(prev => !prev); }}
     >
       <div
-        className={`aurora-badge relative inline-flex items-center justify-center ${sizeClasses[size]} rounded-full font-black uppercase tracking-[0.15em] select-none cursor-default overflow-hidden leading-none`}
+        className={`aurora-badge relative inline-flex items-center justify-center ${sizeClasses[size]} rounded-full font-black uppercase tracking-[0.15em] select-none cursor-pointer overflow-hidden leading-none`}
       >
         {/* Animated gradient background */}
         <div className="absolute inset-0 aurora-gradient rounded-full" />
@@ -52,6 +58,43 @@ export default function AuroraBadge({ size = 'sm', showLabel = true, showTitle =
         {/* Shimmer sweep */}
         <div className="absolute inset-0 aurora-shimmer rounded-full pointer-events-none" />
       </div>
+
+      {/* Custom Tooltip Box */}
+      <AnimatePresence>
+        {showTooltip && (
+          <motion.div
+            initial={{ opacity: 0, y: 8, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 8, scale: 0.9 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2.5 z-[9999] pointer-events-none"
+          >
+            <div
+              className="relative px-3.5 py-2.5 rounded-xl border border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.6)] whitespace-nowrap"
+              style={{
+                background: 'linear-gradient(135deg, rgba(30, 30, 30, 0.97) 0%, rgba(18, 18, 18, 0.97) 100%)',
+                backdropFilter: 'blur(20px)',
+              }}
+            >
+              <div className="flex items-center gap-2">
+                <Shield size={12} className="aurora-text flex-shrink-0" />
+                <span className="text-[11px] font-semibold text-white/90 tracking-wide">
+                  Developer-only badge
+                </span>
+              </div>
+              {/* Arrow */}
+              <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-[1px]">
+                <div
+                  className="w-2.5 h-2.5 rotate-45 border-r border-b border-white/10"
+                  style={{
+                    background: 'rgba(18, 18, 18, 0.97)',
+                  }}
+                />
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {showTitle && (
         <motion.span

@@ -1,8 +1,8 @@
 import { motion, AnimatePresence } from 'motion/react';
-import { Music, Plus, ListMusic, Clock, Filter, Trash2, Heart, MoreHorizontal, Edit3 } from 'lucide-react';
+import { Music, Plus, ListMusic, Clock, Filter, Trash2, Heart, MoreHorizontal, Edit3, ListPlus } from 'lucide-react';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { Track } from '../types';
+import { Track, PlaylistMeta } from '../types';
 import { User } from '@supabase/supabase-js';
 import { isFounder } from '../constants';
 import { useComingSoon } from './ComingSoonToast';
@@ -14,10 +14,30 @@ interface LibraryViewProps {
   onDelete?: (track: Track) => void;
   onEdit?: (track: Track) => void;
   user?: User | null;
+  playlists?: PlaylistMeta[];
+  onAddToPlaylist?: (trackId: string, playlistId: string) => void;
+  onCreatePlaylistWithTrack?: (trackId: string) => void;
 }
 
-function TrackRowMenu({ track, user, onDelete, onEdit }: { track: Track; user?: User | null; onDelete?: (track: Track) => void; onEdit?: (track: Track) => void }) {
+function TrackRowMenu({
+  track,
+  user,
+  onDelete,
+  onEdit,
+  playlists,
+  onAddToPlaylist,
+  onCreatePlaylistWithTrack,
+}: {
+  track: Track;
+  user?: User | null;
+  onDelete?: (track: Track) => void;
+  onEdit?: (track: Track) => void;
+  playlists?: PlaylistMeta[];
+  onAddToPlaylist?: (trackId: string, playlistId: string) => void;
+  onCreatePlaylistWithTrack?: (trackId: string) => void;
+}) {
   const [open, setOpen] = useState(false);
+  const [showPlaylists, setShowPlaylists] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const [menuPos, setMenuPos] = useState({ top: 0, left: 0 });
@@ -29,7 +49,7 @@ function TrackRowMenu({ track, user, onDelete, onEdit }: { track: Track; user?: 
       const rect = triggerRef.current.getBoundingClientRect();
       setMenuPos({
         top: rect.bottom + 4,
-        left: Math.min(rect.right - 180, window.innerWidth - 192),
+        left: Math.min(rect.right - 200, window.innerWidth - 212),
       });
     }
   }, []);
@@ -43,13 +63,14 @@ function TrackRowMenu({ track, user, onDelete, onEdit }: { track: Track; user?: 
         triggerRef.current && !triggerRef.current.contains(e.target as Node)
       ) {
         setOpen(false);
+        setShowPlaylists(false);
       }
     };
     document.addEventListener('mousedown', handler);
-    window.addEventListener('scroll', () => setOpen(false), true);
+    window.addEventListener('scroll', () => { setOpen(false); setShowPlaylists(false); }, true);
     return () => {
       document.removeEventListener('mousedown', handler);
-      window.removeEventListener('scroll', () => setOpen(false), true);
+      window.removeEventListener('scroll', () => { setOpen(false); setShowPlaylists(false); }, true);
     };
   }, [open, updateMenuPos]);
 
@@ -57,7 +78,7 @@ function TrackRowMenu({ track, user, onDelete, onEdit }: { track: Track; user?: 
     <>
       <button
         ref={triggerRef}
-        onClick={(e) => { e.stopPropagation(); setOpen(!open); }}
+        onClick={(e) => { e.stopPropagation(); setOpen(!open); setShowPlaylists(false); }}
         className="p-2 hover:bg-white/10 rounded-full transition-all text-spotify-text-muted hover:text-spotify-text opacity-0 group-hover:opacity-100 flex-shrink-0"
       >
         <MoreHorizontal size={18} />
@@ -70,46 +91,84 @@ function TrackRowMenu({ track, user, onDelete, onEdit }: { track: Track; user?: 
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: -4 }}
             transition={{ duration: 0.15, ease: 'easeOut' }}
-            className="min-w-[180px] py-1.5 rounded-2xl overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.7)] border border-white/10"
+            className="min-w-[200px] py-1.5 rounded-2xl overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.7)] border border-white/10"
             style={{
               background: 'linear-gradient(135deg, rgba(40, 40, 40, 0.98) 0%, rgba(25, 25, 25, 0.98) 100%)',
               backdropFilter: 'blur(40px)',
             }}
           >
-            <button
-              onClick={(e) => { e.stopPropagation(); setOpen(false); triggerComingSoon(); }}
-              className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-white hover:bg-white/10 transition-colors font-medium"
-            >
-              <Heart size={16} className="text-white/50" />
-              <span>Save to Liked</span>
-            </button>
+            {!showPlaylists ? (
+              <>
+                {/* Add to Playlist */}
+                {playlists && onAddToPlaylist && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setShowPlaylists(true); }}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-white hover:bg-white/10 transition-colors font-medium"
+                  >
+                    <ListPlus size={16} className="text-white/50" />
+                    <span>Add to Playlist</span>
+                  </button>
+                )}
 
-            {canDelete && onEdit && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setOpen(false);
-                  onEdit(track);
-                }}
-                className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-spotify-text hover:bg-white/10 transition-colors font-medium"
-              >
-                <Edit3 size={16} />
-                <span>Edit Track</span>
-              </button>
-            )}
+                <button
+                  onClick={(e) => { e.stopPropagation(); setOpen(false); triggerComingSoon(); }}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-white hover:bg-white/10 transition-colors font-medium"
+                >
+                  <Heart size={16} className="text-white/50" />
+                  <span>Save to Liked</span>
+                </button>
 
-            {canDelete && onDelete && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setOpen(false);
-                  onDelete(track);
-                }}
-                className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-red-400 hover:bg-red-500/10 transition-colors font-medium"
-              >
-                <Trash2 size={16} />
-                <span>Delete Track</span>
-              </button>
+                {canDelete && onEdit && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setOpen(false);
+                      onEdit(track);
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-spotify-text hover:bg-white/10 transition-colors font-medium"
+                  >
+                    <Edit3 size={16} />
+                    <span>Edit Track</span>
+                  </button>
+                )}
+
+                {canDelete && onDelete && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setOpen(false);
+                      onDelete(track);
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-red-400 hover:bg-red-500/10 transition-colors font-medium"
+                  >
+                    <Trash2 size={16} />
+                    <span>Delete Track</span>
+                  </button>
+                )}
+              </>
+            ) : (
+              <>
+                <p className="px-4 py-2 text-[10px] font-bold text-spotify-text-muted uppercase tracking-widest">Add to playlist</p>
+                <div className="max-h-48 overflow-y-auto no-scrollbar">
+                  {(playlists || []).map(pl => (
+                    <button
+                      key={pl.id}
+                      onClick={(e) => { e.stopPropagation(); onAddToPlaylist?.(track.id, pl.id); setOpen(false); setShowPlaylists(false); }}
+                      className="w-full flex items-center gap-3 px-4 py-2 text-left text-sm text-white hover:bg-white/10 transition-colors font-medium truncate"
+                    >
+                      <span className="truncate">{pl.title}</span>
+                    </button>
+                  ))}
+                </div>
+                {onCreatePlaylistWithTrack && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setOpen(false); setShowPlaylists(false); onCreatePlaylistWithTrack(track.id); }}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-spotify-green hover:bg-white/10 transition-colors font-medium border-t border-white/5"
+                  >
+                    <span>+ Create New Playlist</span>
+                  </button>
+                )}
+              </>
             )}
           </motion.div>
         </div>,
@@ -119,7 +178,7 @@ function TrackRowMenu({ track, user, onDelete, onEdit }: { track: Track; user?: 
   );
 }
 
-export default function LibraryView({ onPlay, tracks, onUploadClick, onDelete, onEdit, user }: LibraryViewProps) {
+export default function LibraryView({ onPlay, tracks, onUploadClick, onDelete, onEdit, user, playlists, onAddToPlaylist, onCreatePlaylistWithTrack }: LibraryViewProps) {
   const { triggerComingSoon } = useComingSoon();
 
   return (
@@ -144,7 +203,7 @@ export default function LibraryView({ onPlay, tracks, onUploadClick, onDelete, o
             </div>
         </div>
         {/* Add to Collection button — uses theme color for Pink Flamingo support */}
-        <button 
+        <button
             onClick={onUploadClick}
             className="text-black px-6 py-3 rounded-2xl text-xs font-bold uppercase tracking-widest flex items-center gap-2 hover:scale-105 active:scale-95 transition-all shadow-xl self-start md:self-auto"
             style={{ background: 'var(--accent-gradient)', boxShadow: 'var(--accent-glow)' }}
@@ -190,7 +249,15 @@ export default function LibraryView({ onPlay, tracks, onUploadClick, onDelete, o
                           {new Date(track.uploadedAt).toLocaleDateString()}
                       </div>
                   </div>
-                  <TrackRowMenu track={track} user={user} onDelete={onDelete} onEdit={onEdit} />
+                  <TrackRowMenu
+                    track={track}
+                    user={user}
+                    onDelete={onDelete}
+                    onEdit={onEdit}
+                    playlists={playlists}
+                    onAddToPlaylist={onAddToPlaylist}
+                    onCreatePlaylistWithTrack={onCreatePlaylistWithTrack}
+                  />
               </motion.div>
           ))}
       </div>
