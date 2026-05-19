@@ -1,5 +1,5 @@
 import { motion } from 'motion/react';
-import { Crown, Briefcase } from 'lucide-react';
+import { Crown, Briefcase, Lightbulb } from 'lucide-react';
 
 const ease = [0.16, 1, 0.3, 1] as const;
 
@@ -15,6 +15,12 @@ const team = [
     role: 'Executive Director',
     icon: Briefcase,
     description: 'Driving operational excellence and strategic direction for the Akamo platform.',
+  },
+  {
+    name: 'Vihaan Romil',
+    role: 'Professional Dumbass',
+    icon: Lightbulb,
+    description: 'The original idea giver and constant source of inspiration for the platform.',
   },
 ];
 
@@ -78,7 +84,7 @@ export default function AboutSection() {
       </motion.div>
 
       {/* Team grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
         {team.map((member, i) => (
           <motion.div
             key={member.name}
