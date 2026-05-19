@@ -2,10 +2,12 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Music, Plus, ListMusic, Clock, Filter, Trash2, Heart, MoreHorizontal, Edit3, ListPlus } from 'lucide-react';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { Track, PlaylistMeta } from '../types';
+import { Track, PlaylistMeta, Album } from '../types';
 import { User } from '@supabase/supabase-js';
 import { isFounder } from '../constants';
 import { useComingSoon } from './ComingSoonToast';
+import AlbumCard from './AlbumCard';
+import PlaylistCard from './PlaylistCard';
 
 interface LibraryViewProps {
   onPlay: (track: Track) => void;
@@ -17,6 +19,11 @@ interface LibraryViewProps {
   playlists?: PlaylistMeta[];
   onAddToPlaylist?: (trackId: string, playlistId: string) => void;
   onCreatePlaylistWithTrack?: (trackId: string) => void;
+  albums?: Album[];
+  onAlbumClick?: (album: Album) => void;
+  onPlaylistClick?: (playlist: PlaylistMeta) => void;
+  onCreatePlaylist?: () => void;
+  onCreateAlbum?: () => void;
 }
 
 function TrackRowMenu({
@@ -178,7 +185,22 @@ function TrackRowMenu({
   );
 }
 
-export default function LibraryView({ onPlay, tracks, onUploadClick, onDelete, onEdit, user, playlists, onAddToPlaylist, onCreatePlaylistWithTrack }: LibraryViewProps) {
+export default function LibraryView({ 
+  onPlay, 
+  tracks, 
+  onUploadClick, 
+  onDelete, 
+  onEdit, 
+  user, 
+  playlists, 
+  onAddToPlaylist, 
+  onCreatePlaylistWithTrack,
+  albums,
+  onAlbumClick,
+  onPlaylistClick,
+  onCreatePlaylist,
+  onCreateAlbum
+}: LibraryViewProps) {
   const { triggerComingSoon } = useComingSoon();
 
   return (
@@ -213,54 +235,104 @@ export default function LibraryView({ onPlay, tracks, onUploadClick, onDelete, o
         </button>
       </header>
 
-      <div className="flex items-center gap-3 md:gap-4 py-4 overflow-x-auto no-scrollbar">
-          <button className="px-4 md:px-5 py-2 rounded-full bg-spotify-green text-black text-[10px] font-bold uppercase tracking-widest accent-glow whitespace-nowrap">All Assets</button>
-          <button onClick={triggerComingSoon} className="px-4 md:px-5 py-2 rounded-full bg-white/5 text-spotify-text-muted text-[10px] font-bold uppercase tracking-widest hover:bg-white/10 transition-colors whitespace-nowrap">Audio</button>
-          <button onClick={triggerComingSoon} className="px-4 md:px-5 py-2 rounded-full bg-white/5 text-spotify-text-muted text-[10px] font-bold uppercase tracking-widest hover:bg-white/10 transition-colors whitespace-nowrap">Motion</button>
-          <button onClick={triggerComingSoon} className="px-4 md:px-5 py-2 rounded-full bg-white/5 text-spotify-text-muted text-[10px] font-bold uppercase tracking-widest hover:bg-white/10 transition-colors whitespace-nowrap">Playlists</button>
-          <div onClick={triggerComingSoon} className="ml-auto flex items-center gap-2 px-4 py-2 text-spotify-text-muted cursor-pointer hover:text-spotify-text transition-colors whitespace-nowrap">
-              <Filter size={14} />
-              <span className="text-[10px] font-bold uppercase tracking-widest">Filter</span>
-          </div>
-      </div>
+      {/* Playlists Section */}
+      <section>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg md:text-xl font-bold tracking-tight text-spotify-text">Playlists</h3>
+          {onCreatePlaylist && (
+            <button onClick={onCreatePlaylist} className="text-[10px] font-bold text-spotify-text-muted hover:text-spotify-text transition-colors uppercase tracking-widest">
+              + New
+            </button>
+          )}
+        </div>
+        <div className="flex overflow-x-auto no-scrollbar gap-4 pb-2 -mx-4 px-4 md:mx-0 md:px-0 scroll-smooth">
+          {playlists && playlists.length > 0 ? playlists.map((playlist) => (
+            <div key={playlist.id} className="w-36 md:w-48 flex-shrink-0">
+              <PlaylistCard playlist={playlist} onClick={() => onPlaylistClick?.(playlist)} />
+            </div>
+          )) : (
+            <div className="w-full text-center py-6 border border-white/5 border-dashed rounded-2xl opacity-50">
+               <p className="text-xs text-spotify-text-muted font-bold tracking-widest uppercase">No playlists yet</p>
+            </div>
+          )}
+        </div>
+      </section>
 
-      <div className="grid grid-cols-1 gap-1">
-          {tracks.map((track, i) => (
-              <motion.div
-                key={track.id}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.03 }}
-                onClick={() => onPlay(track)}
-                className="group flex items-center gap-3 md:gap-6 p-3 md:p-4 rounded-2xl hover:bg-white/5 transition-all cursor-pointer relative overflow-visible"
-              >
-                  <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg overflow-hidden shrink-0 shadow-lg">
-                      <img src={track.coverUrl} alt={track.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                  </div>
-                  <div className="flex-1 min-w-0 grid grid-cols-2 md:grid-cols-3 items-center gap-2 md:gap-4">
-                      <div className="truncate">
-                          <h4 className="font-bold text-sm text-spotify-text truncate group-hover:text-spotify-green transition-colors">{track.title}</h4>
-                          <p className="text-[10px] text-spotify-text-muted font-bold uppercase tracking-widest mt-0.5">{track.artist}</p>
-                      </div>
-                      <div className="hidden md:block truncate text-xs text-spotify-text-muted font-medium opacity-60">
-                          {track.album}
-                      </div>
-                      <div className="text-right text-[10px] text-spotify-text-muted font-bold opacity-40">
-                          {new Date(track.uploadedAt).toLocaleDateString()}
-                      </div>
-                  </div>
-                  <TrackRowMenu
-                    track={track}
-                    user={user}
-                    onDelete={onDelete}
-                    onEdit={onEdit}
-                    playlists={playlists}
-                    onAddToPlaylist={onAddToPlaylist}
-                    onCreatePlaylistWithTrack={onCreatePlaylistWithTrack}
-                  />
-              </motion.div>
-          ))}
-      </div>
+      {/* Albums Section */}
+      <section>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg md:text-xl font-bold tracking-tight text-spotify-text">Albums</h3>
+          {onCreateAlbum && (
+            <button onClick={onCreateAlbum} className="text-[10px] font-bold text-spotify-text-muted hover:text-spotify-text transition-colors uppercase tracking-widest">
+              + New
+            </button>
+          )}
+        </div>
+        <div className="flex overflow-x-auto no-scrollbar gap-4 pb-2 -mx-4 px-4 md:mx-0 md:px-0 scroll-smooth">
+          {albums && albums.length > 0 ? albums.map((album) => (
+            <div key={album.id} className="w-36 md:w-48 flex-shrink-0">
+              <AlbumCard album={album} onClick={() => onAlbumClick?.(album)} />
+            </div>
+          )) : (
+            <div className="w-full text-center py-6 border border-white/5 border-dashed rounded-2xl opacity-50">
+               <p className="text-xs text-spotify-text-muted font-bold tracking-widest uppercase">No albums yet</p>
+            </div>
+          )}
+        </div>
+      </section>
+
+      <section>
+        <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg md:text-xl font-bold tracking-tight text-spotify-text">All Tracks</h3>
+        </div>
+        <div className="flex items-center gap-3 md:gap-4 pb-4 overflow-x-auto no-scrollbar">
+            <button className="px-4 md:px-5 py-2 rounded-full bg-spotify-green text-black text-[10px] font-bold uppercase tracking-widest accent-glow whitespace-nowrap">All Assets</button>
+            <button onClick={triggerComingSoon} className="px-4 md:px-5 py-2 rounded-full bg-white/5 text-spotify-text-muted text-[10px] font-bold uppercase tracking-widest hover:bg-white/10 transition-colors whitespace-nowrap">Audio</button>
+            <button onClick={triggerComingSoon} className="px-4 md:px-5 py-2 rounded-full bg-white/5 text-spotify-text-muted text-[10px] font-bold uppercase tracking-widest hover:bg-white/10 transition-colors whitespace-nowrap">Motion</button>
+            <div onClick={triggerComingSoon} className="ml-auto flex items-center gap-2 px-4 py-2 text-spotify-text-muted cursor-pointer hover:text-spotify-text transition-colors whitespace-nowrap">
+                <Filter size={14} />
+                <span className="text-[10px] font-bold uppercase tracking-widest">Filter</span>
+            </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-1">
+            {tracks.map((track, i) => (
+                <motion.div
+                  key={track.id}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.03 }}
+                  onClick={() => onPlay(track)}
+                  className="group flex items-center gap-3 md:gap-6 p-3 md:p-4 rounded-2xl hover:bg-white/5 transition-all cursor-pointer relative overflow-visible"
+                >
+                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg overflow-hidden shrink-0 shadow-lg">
+                        <img src={track.coverUrl} alt={track.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                    </div>
+                    <div className="flex-1 min-w-0 grid grid-cols-2 md:grid-cols-3 items-center gap-2 md:gap-4">
+                        <div className="truncate">
+                            <h4 className="font-bold text-sm text-spotify-text truncate group-hover:text-spotify-green transition-colors">{track.title}</h4>
+                            <p className="text-[10px] text-spotify-text-muted font-bold uppercase tracking-widest mt-0.5">{track.artist}</p>
+                        </div>
+                        <div className="hidden md:block truncate text-xs text-spotify-text-muted font-medium opacity-60">
+                            {track.album}
+                        </div>
+                        <div className="text-right text-[10px] text-spotify-text-muted font-bold opacity-40">
+                            {new Date(track.uploadedAt).toLocaleDateString()}
+                        </div>
+                    </div>
+                    <TrackRowMenu
+                      track={track}
+                      user={user}
+                      onDelete={onDelete}
+                      onEdit={onEdit}
+                      playlists={playlists}
+                      onAddToPlaylist={onAddToPlaylist}
+                      onCreatePlaylistWithTrack={onCreatePlaylistWithTrack}
+                    />
+                </motion.div>
+            ))}
+        </div>
+      </section>
     </motion.div>
   );
 }

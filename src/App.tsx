@@ -449,6 +449,17 @@ export default function App() {
             playlists={playlists}
             onAddToPlaylist={handleAddToPlaylist}
             onCreatePlaylistWithTrack={handleCreatePlaylistWithTrack}
+            albums={albums}
+            onAlbumClick={handleAlbumClick}
+            onPlaylistClick={handlePlaylistClick}
+            onCreatePlaylist={() => {
+              if (!user) { setCurrentView('auth'); return; }
+              setIsCreatePlaylistOpen(true);
+            }}
+            onCreateAlbum={() => {
+              if (!user) { setCurrentView('auth'); return; }
+              setIsCreateAlbumOpen(true);
+            }}
           />
         );
       case 'favorites':
@@ -463,6 +474,17 @@ export default function App() {
             playlists={playlists}
             onAddToPlaylist={handleAddToPlaylist}
             onCreatePlaylistWithTrack={handleCreatePlaylistWithTrack}
+            albums={albums}
+            onAlbumClick={handleAlbumClick}
+            onPlaylistClick={handlePlaylistClick}
+            onCreatePlaylist={() => {
+              if (!user) { setCurrentView('auth'); return; }
+              setIsCreatePlaylistOpen(true);
+            }}
+            onCreateAlbum={() => {
+              if (!user) { setCurrentView('auth'); return; }
+              setIsCreateAlbumOpen(true);
+            }}
           />
         );
       case 'albums':
@@ -671,13 +693,11 @@ export default function App() {
           onViewChange={setCurrentView}
         />
 
-        <div className="mobile-content-padding px-4 md:px-12 py-6 md:py-10">
+        <div className="mobile-content-padding px-4 md:px-12 py-6 md:py-10 pb-48 md:pb-56">
           <AnimatePresence mode="wait">
             {renderContent()}
           </AnimatePresence>
         </div>
-
-        <div className="mobile-bottom-spacer h-64 md:h-48 shrink-0 min-h-[16rem] md:min-h-[12rem] w-full" /> {/* Spacer for player + mobile nav */}
       </main>
 
       <div className="fixed bottom-0 left-0 md:left-72 right-0 z-50">
