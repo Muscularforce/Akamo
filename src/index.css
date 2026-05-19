@@ -42,6 +42,17 @@
   --accent-gradient: linear-gradient(135deg, #FF007F 0%, #FF66B2 100%);
 }
 
+[data-theme='crimson'] {
+  --accent-primary: #9B111E;
+  --accent-secondary: #DC143C;
+  --spotify-black: #080001;
+  --spotify-dark-gray: #120003;
+  --spotify-green: #DC143C;
+  --accent-glow: 0 0 35px rgba(220, 20, 60, 0.6);
+  --accent-gradient: linear-gradient(135deg, #8A0303 0%, #D91023 100%);
+}
+
+
 @layer base {
   body {
     @apply bg-spotify-black text-spotify-text font-sans antialiased selection:bg-spotify-green selection:text-black;

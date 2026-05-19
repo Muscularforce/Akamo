@@ -30,7 +30,7 @@ import { ComingSoonProvider } from './components/ComingSoonToast';
 
 export default function App() {
   const [tracks, setTracks] = useState<Track[]>([]);
-  const [theme, setTheme] = useState<'dark' | 'pink'>('dark');
+  const [theme, setTheme] = useState<'dark' | 'pink' | 'crimson'>('dark');
   const [currentView, setCurrentView] = useState<View>('home');
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -297,26 +297,28 @@ export default function App() {
     setIsUploadModalOpen(true);
   };
 
-  const handleUpload = async (newTrack: Omit<Track, 'id'>) => {
+  const handleUpload = async (newTrack: Omit<Track, 'id'> | Omit<Track, 'id'>[]) => {
     if (!user) throw new Error('You must be logged in to upload.');
 
     try {
-      const { data, error } = await supabase.from('tracks').insert({
-        ...newTrack,
+      const tracksToInsert = Array.isArray(newTrack) ? newTrack : [newTrack];
+      const tracksWithMeta = tracksToInsert.map(t => ({
+        ...t,
         ownerId: user.id,
         ownerEmail: user.email,
         uploadedAt: Date.now(),
-      }).select();
+      }));
+
+      const { data, error } = await supabase.from('tracks').insert(tracksWithMeta).select();
       
       if (error) throw error;
       
       if (data && data.length > 0) {
-        const insertedTrack = data[0] as Track;
-        setTracks(prev => [insertedTrack, ...prev]);
+        setTracks(prev => [...(data as Track[]).reverse(), ...prev]);
       }
     } catch (error: any) {
-      console.error("Error saving track:", error);
-      throw new Error(error.message || 'Failed to save track to library. Please try again.');
+      console.error("Error saving tracks:", error);
+      throw new Error(error.message || 'Failed to save track(s) to library. Please try again.');
     }
   };
 

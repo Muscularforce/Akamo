@@ -11,8 +11,8 @@ import { useComingSoon } from './ComingSoonToast';
 interface HeaderProps {
     onUploadClick: () => void;
     onLoginClick: () => void;
-    currentTheme: 'dark' | 'pink';
-    onThemeChange: (theme: 'dark' | 'pink') => void;
+    currentTheme: 'dark' | 'pink' | 'crimson';
+    onThemeChange: (theme: 'dark' | 'pink' | 'crimson') => void;
     user: User | null;
     userProfile: UserProfile | null;
     searchQuery: string;
@@ -144,6 +144,13 @@ export default function Header({ onUploadClick, onLoginClick, currentTheme, onTh
                       >
                         <Heart size={16} className="fill-current" />
                         <span className="tracking-wide">Neon Flamingo</span>
+                      </button>
+                      <button 
+                        onClick={() => { onThemeChange('crimson'); setIsSettingsOpen(false); }}
+                        className={`w-full text-left px-4 py-3 text-xs rounded-xl transition-all flex items-center gap-4 ${currentTheme === 'crimson' ? 'bg-spotify-green text-black font-bold accent-glow' : 'hover:bg-white/10 text-spotify-text'}`}
+                      >
+                        <Heart size={16} className="text-[#DC143C] fill-current" />
+                        <span className="tracking-wide">Crimson Aura</span>
                       </button>
                     </div>
                   </motion.div>
