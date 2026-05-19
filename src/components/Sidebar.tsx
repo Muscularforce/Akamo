@@ -99,14 +99,6 @@ export default function Sidebar({ activeView, onViewChange, onCreatePlaylist }: 
             {activeView === 'favorites' && <motion.div layoutId="active-pill" className="ml-auto w-1.5 h-1.5 rounded-full bg-spotify-green accent-glow" />}
           </motion.div>
 
-          <motion.div
-              whileHover={{ x: 8 }}
-              onClick={triggerComingSoon}
-              className="flex items-center gap-5 px-3 py-2 cursor-pointer text-spotify-text-muted hover:text-spotify-text hover:bg-white/5 rounded-2xl transition-all"
-          >
-            <Music2 size={22} />
-            <span className="text-sm font-medium tracking-wide">Recently Played</span>
-          </motion.div>
         </div>
       </div>
 

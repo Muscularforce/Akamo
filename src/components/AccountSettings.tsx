@@ -36,7 +36,7 @@ export default function AccountSettings({ user, userProfile, onProfileUpdate, on
 
   const owner = isOwner(userProfile.role);
 
-  const handleFileSelect = useCallback((file: File) => {
+  const handleFileSelect = async (file: File) => {
     if (!file.type.startsWith('image/')) {
       setError('Please select an image file.');
       return;
@@ -45,12 +45,36 @@ export default function AccountSettings({ user, userProfile, onProfileUpdate, on
       setError('Image must be under 5MB.');
       return;
     }
-    pendingFile.current = file;
+
+    // Show local preview
     const reader = new FileReader();
     reader.onloadend = () => setAvatarPreview(reader.result as string);
     reader.readAsDataURL(file);
     setError('');
-  }, []);
+
+    // Auto-save the avatar
+    setIsSaving(true);
+    try {
+      const url = await uploadAvatar(user.id, file);
+      if (!url) throw new Error('Avatar upload failed.');
+      
+      const updated = await upsertProfile(user.id, {
+        display_name: displayName.trim(),
+        avatar_url: url,
+      });
+      
+      if (!updated) throw new Error('Profile update failed.');
+      
+      onProfileUpdate(updated);
+      setAvatarPreview(updated.avatar_url);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 2500);
+    } catch (err: any) {
+      setError(err.message || 'Failed to upload avatar.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -72,28 +96,14 @@ export default function AccountSettings({ user, userProfile, onProfileUpdate, on
     setError('');
 
     try {
-      let newAvatarUrl = userProfile.avatar_url;
-
-      // Upload avatar if a new file was selected
-      if (pendingFile.current) {
-        const url = await uploadAvatar(user.id, pendingFile.current);
-        if (url) {
-          newAvatarUrl = url;
-        } else {
-          throw new Error('Avatar upload failed.');
-        }
-      }
-
-      // Update profile in DB
       const updated = await upsertProfile(user.id, {
         display_name: displayName.trim(),
-        avatar_url: newAvatarUrl,
+        avatar_url: avatarPreview, // Use current preview which was already auto-uploaded if changed
       });
 
       if (!updated) throw new Error('Profile update failed.');
 
       onProfileUpdate(updated);
-      pendingFile.current = null;
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 2500);
     } catch (err: any) {

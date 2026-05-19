@@ -301,13 +301,19 @@ export default function App() {
     if (!user) throw new Error('You must be logged in to upload.');
 
     try {
-      const { error } = await supabase.from('tracks').insert({
+      const { data, error } = await supabase.from('tracks').insert({
         ...newTrack,
         ownerId: user.id,
         ownerEmail: user.email,
         uploadedAt: Date.now(),
-      });
+      }).select();
+      
       if (error) throw error;
+      
+      if (data && data.length > 0) {
+        const insertedTrack = data[0] as Track;
+        setTracks(prev => [insertedTrack, ...prev]);
+      }
     } catch (error: any) {
       console.error("Error saving track:", error);
       throw new Error(error.message || 'Failed to save track to library. Please try again.');
