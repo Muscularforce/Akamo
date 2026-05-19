@@ -707,10 +707,12 @@ export default function App() {
           currentTrack={currentTrack}
           isPlaying={isPlaying}
           onTogglePlay={() => setIsPlaying(!isPlaying)}
+          onSyncPlayState={setIsPlaying}
           onNext={handleNext}
           onPrev={handlePrev}
           userProfile={userProfile}
           playbackContext={playbackContext}
+          tracks={tracks}
         />
         <MobileNav activeView={currentView} onViewChange={handleViewChange} />
       </div>

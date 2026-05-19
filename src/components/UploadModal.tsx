@@ -114,15 +114,7 @@ export default function UploadModal({ isOpen, onClose, onUpload, onUpdate, userP
     const newFiles = Array.from(files).filter(f => f.type.startsWith('audio/') || f.type.startsWith('video/'));
     if (newFiles.length === 0) return;
     
-    // Calculate how many more we can add (max 4 total)
-    const availableSlots = 4 - drafts.length;
-    const filesToAdd = newFiles.slice(0, availableSlots);
-    
-    if (filesToAdd.length === 0 && newFiles.length > 0) {
-      setErrorMessage("Maximum 4 tracks per upload session.");
-      triggerShake();
-      return;
-    }
+    const filesToAdd = newFiles;
 
     const newDrafts: DraftTrack[] = filesToAdd.map(file => ({
       id: Math.random().toString(36).substring(7),
@@ -357,7 +349,7 @@ export default function UploadModal({ isOpen, onClose, onUpload, onUpdate, userP
                 {isEditing ? 'Edit Sound' : 'Publish Sounds'}
               </h2>
               <p className="text-spotify-text-muted opacity-60 font-medium text-sm">
-                {isEditing ? 'Update your track details.' : 'Broadcast up to 4 frequencies to the global network.'}
+                {isEditing ? 'Update your track details.' : 'Broadcast your frequencies to the global network.'}
               </p>
             </div>
 
@@ -424,7 +416,7 @@ export default function UploadModal({ isOpen, onClose, onUpload, onUpdate, userP
                   </div>
                   <div className="text-center">
                     <span className="block font-bold text-xl md:text-2xl tracking-tighter text-spotify-text">Synchronize Audio</span>
-                    <span className="text-sm text-spotify-text-muted font-medium opacity-60">Drag up to 4 assets here or select manually</span>
+                    <span className="text-sm text-spotify-text-muted font-medium opacity-60">Drag assets here or select manually</span>
                   </div>
                 </div>
               ) : (
@@ -600,13 +592,13 @@ export default function UploadModal({ isOpen, onClose, onUpload, onUpdate, userP
                     })}
                   </div>
 
-                  {!isEditing && drafts.length < 4 && (
+                  {!isEditing && (
                     <button
                       onClick={() => audioInputRef.current?.click()}
                       className="w-full py-4 border-2 border-dashed border-white/10 hover:border-white/20 rounded-3xl flex items-center justify-center gap-2 text-spotify-text-muted hover:text-spotify-text transition-colors mt-2"
                     >
                       <Plus size={18} />
-                      <span className="text-xs font-bold uppercase tracking-widest">Add another track ({drafts.length}/4)</span>
+                      <span className="text-xs font-bold uppercase tracking-widest">Add another track</span>
                     </button>
                   )}
                   
