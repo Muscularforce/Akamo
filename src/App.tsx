@@ -20,6 +20,8 @@ import PlaylistsView from './components/PlaylistsView';
 import PlaylistDetailView from './components/PlaylistDetailView';
 import CreatePlaylistModal from './components/CreatePlaylistModal';
 import CreateAlbumModal from './components/CreateAlbumModal';
+import AlbumCard from './components/AlbumCard';
+import PlaylistCard from './components/PlaylistCard';
 import { Track, View, UserProfile, Album, PlaylistMeta, PlaybackContext } from './types';
 import { supabase, fetchProfile, fetchAlbums, fetchPlaylists, createPlaylist, addTrackToPlaylist, createAlbum, addTrackToAlbum, deleteAlbum, removeTrackFromAlbum } from './lib/supabase';
 import { User } from '@supabase/supabase-js';
@@ -545,41 +547,44 @@ export default function App() {
             </h1>
 
             {!searchQuery && (
-              <div className="mobile-quick-cards grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-12 md:mb-16">
-                {tracks.slice(0, 6).map((track, i) => (
-                  <motion.div
-                    key={track.id}
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: i * 0.05 + 0.2, duration: 0.5 }}
-                    whileHover={{ y: -5, scale: 1.02 }}
-                    className="liquid-glass group rounded-2xl md:rounded-3xl overflow-hidden flex items-center cursor-pointer p-0 h-20 md:h-24 transition-all hover:shadow-[0_20px_40px_rgba(0,0,0,0.4),0_0_20px_rgba(29,185,84,0.1)]"
-                    onClick={() => handlePlay(track)}
-                  >
-                    <div className="h-full aspect-square relative overflow-hidden shrink-0">
-                      <img
-                        src={track.coverUrl}
-                        alt={track.title}
-                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                      />
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                         <div className="w-10 h-10 rounded-full bg-spotify-green flex items-center justify-center text-black accent-glow scale-0 group-hover:scale-100 transition-transform duration-300">
-                            <Play fill="currentColor" size={20} className="ml-1" />
-                         </div>
-                      </div>
+              <>
+                {/* Playlists Section */}
+                {playlists.length > 0 && (
+                  <section className="mb-8 md:mb-12">
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className="text-xl md:text-2xl font-bold tracking-tight text-spotify-text">Your Playlists</h2>
                     </div>
-                    <div className="flex-1 px-3 md:px-6 py-2 truncate">
-                      <h3 className="font-bold text-base truncate text-spotify-text tracking-tight group-hover:text-spotify-green transition-colors">{track.title}</h3>
-                      <p className="text-xs text-spotify-text-muted font-medium opacity-60 mt-1">{track.artist}</p>
+                    <div className="flex overflow-x-auto no-scrollbar gap-4 pb-4 -mx-4 px-4 md:mx-0 md:px-0 scroll-smooth">
+                      {playlists.map((playlist) => (
+                        <div key={playlist.id} className="w-36 md:w-48 flex-shrink-0">
+                          <PlaylistCard playlist={playlist} onClick={() => handlePlaylistClick(playlist)} />
+                        </div>
+                      ))}
                     </div>
-                  </motion.div>
-                ))}
-              </div>
+                  </section>
+                )}
+
+                {/* Albums Section */}
+                {albums.length > 0 && (
+                  <section className="mb-8 md:mb-12">
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className="text-xl md:text-2xl font-bold tracking-tight text-spotify-text">Albums</h2>
+                    </div>
+                    <div className="flex overflow-x-auto no-scrollbar gap-4 pb-4 -mx-4 px-4 md:mx-0 md:px-0 scroll-smooth">
+                      {albums.map((album) => (
+                        <div key={album.id} className="w-36 md:w-48 flex-shrink-0">
+                          <AlbumCard album={album} onClick={() => handleAlbumClick(album)} />
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                )}
+              </>
             )}
 
             <section className="mb-12">
               <div className="flex items-center justify-between mb-8">
-                <h2 className="text-2xl font-bold tracking-tight text-spotify-text">
+                <h2 className="text-xl md:text-2xl font-bold tracking-tight text-spotify-text">
                   {searchQuery ? 'Found Tracks' : 'Focus'}
                 </h2>
                 {!searchQuery && (
@@ -666,7 +671,7 @@ export default function App() {
           </AnimatePresence>
         </div>
 
-        <div className="mobile-bottom-spacer h-60 md:h-48" /> {/* Spacer for player + mobile nav */}
+        <div className="mobile-bottom-spacer h-64 md:h-48 shrink-0 min-h-[16rem] md:min-h-[12rem] w-full" /> {/* Spacer for player + mobile nav */}
       </main>
 
       <div className="fixed bottom-0 left-0 md:left-72 right-0 z-50">

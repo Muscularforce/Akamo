@@ -9,7 +9,7 @@ interface MobileNavProps {
 
 export default function MobileNav({ activeView, onViewChange }: MobileNavProps) {
   return (
-    <nav className="md:hidden flex items-center justify-around px-6 py-3 bg-spotify-black/90 backdrop-blur-3xl border-t border-white/5">
+    <nav className="md:hidden flex items-center justify-around px-6 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] bg-spotify-black/90 backdrop-blur-3xl border-t border-white/5">
       <motion.button 
         whileTap={{ scale: 0.8 }} 
         onClick={() => onViewChange('home')}
