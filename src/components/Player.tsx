@@ -18,6 +18,8 @@ interface PlayerProps {
   onPrev: () => void;
   userProfile?: UserProfile | null;
   playbackContext?: PlaybackContext | null;
+  tracks?: Track[];
+  onSyncPlayState?: (isPlaying: boolean) => void;
 }
 
 const ScrollingText = ({ text, className, speed = 30 }: { text: string; className: string; speed?: number }) => {
@@ -50,11 +52,13 @@ const ScrollingText = ({ text, className, speed = 30 }: { text: string; classNam
   );
 };
 
-export default function Player({ currentTrack, isPlaying, onTogglePlay, onNext, onPrev, userProfile, playbackContext }: PlayerProps) {
+export default function Player({ currentTrack, isPlaying, onTogglePlay, onNext, onPrev, userProfile, playbackContext, tracks = [], onSyncPlayState }: PlayerProps) {
   const [progress, setProgress] = useState(0);
   const [volume, setVolume] = useState(0.7);
   const [isLooping, setIsLooping] = useState(false);
+  const [showQueue, setShowQueue] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const animationRef = useRef<number>();
   // Check if the track's uploader is the founder
   const isCreator = isFounder(currentTrack?.ownerEmail);
   const { triggerComingSoon } = useComingSoon();
@@ -110,12 +114,26 @@ export default function Player({ currentTrack, isPlaying, onTogglePlay, onNext, 
     });
   };
 
-  const handleTimeUpdate = () => {
-    if (audioRef.current) {
-      const p = (audioRef.current.currentTime / audioRef.current.duration) * 100;
-      setProgress(p || 0);
+  // Smooth uncapped FPS progress bar via requestAnimationFrame
+  useEffect(() => {
+    const updateProgress = () => {
+      if (audioRef.current) {
+        const p = (audioRef.current.currentTime / audioRef.current.duration) * 100;
+        setProgress(p || 0);
+      }
+      animationRef.current = requestAnimationFrame(updateProgress);
+    };
+
+    if (isPlaying) {
+      animationRef.current = requestAnimationFrame(updateProgress);
+    } else if (animationRef.current) {
+      cancelAnimationFrame(animationRef.current);
     }
-  };
+
+    return () => {
+      if (animationRef.current) cancelAnimationFrame(animationRef.current);
+    };
+  }, [isPlaying, currentTrack]);
 
   const handleProgressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = parseFloat(e.target.value);
@@ -140,14 +158,16 @@ export default function Player({ currentTrack, isPlaying, onTogglePlay, onNext, 
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const queueTracks = playbackContext ? playbackContext.tracks.slice(playbackContext.currentIndex + 1) : tracks.slice(tracks.findIndex(t => t.id === currentTrack?.id) + 1);
+
   return (
     <div className="w-full flex justify-center px-2 md:px-4 pb-2 md:pb-6 z-50">
-      <div className="mobile-player liquid-glass rounded-[1.5rem] md:rounded-[2.5rem] px-3 md:px-8 h-[4.5rem] md:h-24 flex items-center justify-between gap-2 md:gap-8 relative overflow-hidden group/player w-full max-w-6xl">
+      <div className="mobile-player liquid-glass rounded-[1.5rem] md:rounded-[2.5rem] px-3 md:px-8 h-[4.5rem] md:h-24 flex items-center justify-between gap-1 md:gap-8 relative overflow-visible group/player w-full max-w-6xl">
         {/* Glow behind cover */}
-        <div className="absolute left-0 top-0 w-40 h-full bg-spotify-green/10 blur-3xl pointer-events-none" />
+        <div className="absolute left-0 top-0 w-40 h-full bg-spotify-green/10 blur-3xl pointer-events-none rounded-l-[2.5rem]" />
         
         {/* Track Info */}
-        <div className="flex items-center gap-2 md:gap-5 w-[30%] md:w-[30%] min-w-0 md:min-w-[240px] relative z-10">
+        <div className="flex items-center gap-2 md:gap-5 w-[40%] md:w-[30%] min-w-0 md:min-w-[240px] relative z-10">
           <AnimatePresence mode="wait">
             {currentTrack ? (
               <motion.div
@@ -279,7 +299,7 @@ export default function Player({ currentTrack, isPlaying, onTogglePlay, onNext, 
             <button onClick={triggerComingSoon} className="text-spotify-text-muted hover:text-spotify-text hover:bg-white/10 p-2 rounded-full transition-all md:block hidden">
                 <Mic2 size={16} />
             </button>
-            <button onClick={triggerComingSoon} className="text-spotify-text-muted hover:text-spotify-text hover:bg-white/10 p-2 rounded-full transition-all md:block hidden">
+            <button onClick={() => setShowQueue(!showQueue)} className={`p-2 rounded-full transition-all md:block hidden ${showQueue ? 'text-spotify-green bg-white/10' : 'text-spotify-text-muted hover:text-spotify-text hover:bg-white/10'}`}>
                 <ListMusic size={18} />
             </button>
             <button onClick={triggerComingSoon} className="text-spotify-text-muted hover:text-spotify-text hover:bg-white/10 p-2 rounded-full transition-all md:block hidden">
@@ -332,11 +352,42 @@ export default function Player({ currentTrack, isPlaying, onTogglePlay, onNext, 
           <audio
             ref={audioRef}
             src={currentTrack.audioUrl}
-            onTimeUpdate={handleTimeUpdate}
             onEnded={handleEnded}
+            onPlay={() => onSyncPlayState?.(true)}
+            onPause={() => onSyncPlayState?.(false)}
             className="hidden"
           />
         )}
+
+        {/* Queue Popover */}
+        <AnimatePresence>
+          {showQueue && (
+            <motion.div
+              initial={{ opacity: 0, y: 20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.95 }}
+              className="absolute bottom-full right-4 md:right-8 mb-4 w-72 md:w-80 max-h-96 liquid-glass rounded-3xl p-4 shadow-2xl border border-white/10 overflow-hidden flex flex-col z-50 hidden md:flex"
+            >
+              <div className="flex items-center justify-between mb-4 px-2 shrink-0">
+                <h3 className="text-sm font-bold text-spotify-text tracking-widest uppercase">Next in Queue</h3>
+                <span className="text-[10px] text-spotify-text-muted font-bold">{queueTracks.length} Tracks</span>
+              </div>
+              <div className="flex-1 overflow-y-auto no-scrollbar flex flex-col gap-2">
+                {queueTracks.length > 0 ? queueTracks.map((t) => (
+                  <div key={t.id} className="flex items-center gap-3 p-2 rounded-xl hover:bg-white/5 transition-colors cursor-pointer group">
+                    <img src={t.coverUrl} alt="" className="w-10 h-10 rounded-lg object-cover group-hover:scale-105 transition-transform" />
+                    <div className="flex-1 min-w-0 flex flex-col">
+                      <span className="text-xs font-bold text-spotify-text truncate">{t.title}</span>
+                      <span className="text-[10px] text-spotify-text-muted truncate">{t.artist}</span>
+                    </div>
+                  </div>
+                )) : (
+                  <p className="text-xs text-spotify-text-muted p-4 text-center">Queue is empty</p>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );
