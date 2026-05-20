@@ -406,7 +406,7 @@ export default function UploadModal({ isOpen, onClose, onUpload, onUpdate, userP
                   <input
                     ref={audioInputRef}
                     type="file"
-                    accept="audio/*,video/mp4"
+                    accept="audio/*,audio/mpeg,.mp3,video/mp4"
                     multiple
                     onChange={(e) => e.target.files && handleFilesSelect(e.target.files)}
                     className="hidden"
