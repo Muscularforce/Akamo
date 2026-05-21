@@ -39,7 +39,8 @@ export default function AuroraBadge({ size = 'sm', showLabel = true, showTitle =
       onClick={(e) => { e.stopPropagation(); setShowTooltip(prev => !prev); }}
     >
       <div
-        className={`aurora-badge relative inline-flex items-center justify-center ${sizeClasses[size]} rounded-full font-black uppercase tracking-[0.15em] select-none cursor-pointer overflow-hidden leading-none`}
+        className={`aurora-badge relative inline-flex items-center justify-center ${sizeClasses[size]} rounded-full font-bold not-italic uppercase tracking-[0.15em] select-none cursor-pointer overflow-hidden leading-none`}
+        style={{ fontStyle: 'normal' }}
       >
         {/* Animated gradient background */}
         <div className="absolute inset-0 aurora-gradient rounded-full" />

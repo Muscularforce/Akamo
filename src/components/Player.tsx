@@ -167,7 +167,7 @@ export default function Player({ currentTrack, isPlaying, onTogglePlay, onNext, 
         <div className="absolute left-0 top-0 w-40 h-full bg-spotify-green/10 blur-3xl pointer-events-none rounded-l-[2.5rem]" />
         
         {/* Track Info */}
-        <div className="flex items-center gap-2 md:gap-5 w-[40%] md:w-[30%] min-w-0 md:min-w-[240px] relative z-10">
+        <div className="flex items-center gap-2 md:gap-5 flex-1 md:flex-none md:w-[30%] min-w-0 md:min-w-[240px] relative z-10">
           <AnimatePresence mode="wait">
             {currentTrack ? (
               <motion.div
@@ -175,7 +175,7 @@ export default function Player({ currentTrack, isPlaying, onTogglePlay, onNext, 
                 initial={{ opacity: 0, scale: 0.8, x: -20 }}
                 animate={{ opacity: 1, scale: 1, x: 0 }}
                 exit={{ opacity: 0, scale: 0.8, x: 20 }}
-                className="flex items-center gap-2 md:gap-5 w-full"
+                className="flex items-center gap-2 md:gap-5 w-full min-w-0"
               >
                 <div className="player-cover w-11 h-11 md:w-16 md:h-16 rounded-xl md:rounded-2xl overflow-hidden shadow-[0_10px_30px_rgba(0,0,0,0.5)] flex-shrink-0 group-hover/player:scale-105 transition-transform duration-500 relative"
                 >
@@ -225,7 +225,7 @@ export default function Player({ currentTrack, isPlaying, onTogglePlay, onNext, 
         </div>
 
         {/* Controls */}
-        <div className="flex flex-col items-center gap-1 md:gap-2.5 flex-1 max-w-[500px] relative z-10">
+        <div className="flex flex-col items-center gap-1 md:gap-2.5 shrink-0 w-[110px] md:w-auto md:flex-1 max-w-[500px] relative z-10">
           <div className="flex items-center gap-3 md:gap-8">
             <button onClick={triggerComingSoon} className="text-spotify-text-muted hover:text-spotify-text transition-all scale-90 hover:scale-110 active:scale-95 hidden md:flex items-center justify-center">
               <Shuffle size={18} />

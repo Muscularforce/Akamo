@@ -19,19 +19,24 @@ interface CreateAlbumModalProps {
     coverUrl: string;
     coverPath: string;
   }, trackIds: string[]) => Promise<void>;
+  onUpdate?: (album: Partial<Album>, trackIds: string[]) => Promise<void>;
+  editAlbum?: Album | null;
+  initialTrackIds?: string[];
   // Existing tracks available for selection — only show the user's own library
   tracks: Track[];
 }
 
-export default function CreateAlbumModal({ isOpen, onClose, onCreate, tracks }: CreateAlbumModalProps) {
+export default function CreateAlbumModal({ isOpen, onClose, onCreate, onUpdate, editAlbum, initialTrackIds, tracks }: CreateAlbumModalProps) {
+  const isEditing = !!editAlbum;
+
   // ─── Form State ───────────────────────────────────────
-  const [title, setTitle] = useState('');
-  const [artist, setArtist] = useState('');
-  const [year, setYear] = useState(new Date().getFullYear());
-  const [genre, setGenre] = useState('');
+  const [title, setTitle] = useState(editAlbum?.title || '');
+  const [artist, setArtist] = useState(editAlbum?.artist || '');
+  const [year, setYear] = useState(editAlbum?.year || new Date().getFullYear());
+  const [genre, setGenre] = useState(editAlbum?.genre || '');
   const [coverFile, setCoverFile] = useState<File | null>(null);
-  const [coverPreview, setCoverPreview] = useState<string | null>(null);
-  const [selectedTrackIds, setSelectedTrackIds] = useState<string[]>([]);
+  const [coverPreview, setCoverPreview] = useState<string | null>(editAlbum?.coverUrl || null);
+  const [selectedTrackIds, setSelectedTrackIds] = useState<string[]>(initialTrackIds || []);
 
   // ─── UI State ─────────────────────────────────────────
   // Two-step flow: metadata first, then pick tracks — reduces cognitive load
@@ -60,7 +65,7 @@ export default function CreateAlbumModal({ isOpen, onClose, onCreate, tracks }: 
     const newErrors: typeof errors = {};
     if (!title.trim()) newErrors.title = 'Album name is required';
     if (!artist.trim()) newErrors.artist = 'Artist is required';
-    if (!coverFile) newErrors.cover = 'Cover art is required';
+    if (!isEditing && !coverFile && !coverPreview) newErrors.cover = 'Cover art is required';
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -100,28 +105,45 @@ export default function CreateAlbumModal({ isOpen, onClose, onCreate, tracks }: 
 
       const timestamp = Date.now();
 
-      // Upload cover art to Supabase Storage — same bucket/path convention as UploadModal
-      const coverExt = coverFile!.name.split('.').pop() || 'jpg';
-      const coverPath = `${user.id}/${timestamp}-album-cover.${coverExt}`;
-      const { error: coverError } = await supabase.storage
-        .from('songs')
-        .upload(coverPath, coverFile!, { upsert: true });
+      let coverUrl = editAlbum?.coverUrl || '';
+      let coverPath = editAlbum?.coverPath || '';
 
-      if (coverError) throw coverError;
+      if (coverFile) {
+        // Upload cover art to Supabase Storage — same bucket/path convention as UploadModal
+        const coverExt = coverFile.name.split('.').pop() || 'jpg';
+        coverPath = `${user.id}/${timestamp}-album-cover.${coverExt}`;
+        const { error: coverError } = await supabase.storage
+          .from('songs')
+          .upload(coverPath, coverFile, { upsert: true });
 
-      const coverUrl = supabase.storage.from('songs').getPublicUrl(coverPath).data.publicUrl;
+        if (coverError) throw coverError;
+        coverUrl = supabase.storage.from('songs').getPublicUrl(coverPath).data.publicUrl;
+      }
 
-      await onCreate(
-        {
-          title: title.trim(),
-          artist: artist.trim(),
-          year,
-          genre: genre.trim(),
-          coverUrl,
-          coverPath,
-        },
-        selectedTrackIds,
-      );
+      if (isEditing && onUpdate) {
+        await onUpdate(
+          {
+            title: title.trim(),
+            artist: artist.trim(),
+            year,
+            genre: genre.trim(),
+            ...(coverFile ? { coverUrl, coverPath } : {})
+          },
+          selectedTrackIds
+        );
+      } else {
+        await onCreate(
+          {
+            title: title.trim(),
+            artist: artist.trim(),
+            year,
+            genre: genre.trim(),
+            coverUrl,
+            coverPath,
+          },
+          selectedTrackIds,
+        );
+      }
 
       // Reset everything and close
       resetForm();
@@ -136,13 +158,13 @@ export default function CreateAlbumModal({ isOpen, onClose, onCreate, tracks }: 
   };
 
   const resetForm = () => {
-    setTitle('');
-    setArtist('');
-    setYear(new Date().getFullYear());
-    setGenre('');
+    setTitle(editAlbum?.title || '');
+    setArtist(editAlbum?.artist || '');
+    setYear(editAlbum?.year || new Date().getFullYear());
+    setGenre(editAlbum?.genre || '');
     setCoverFile(null);
-    setCoverPreview(null);
-    setSelectedTrackIds([]);
+    setCoverPreview(editAlbum?.coverUrl || null);
+    setSelectedTrackIds(initialTrackIds || []);
     setStep('details');
     setErrors({});
     setTrackSearch('');
@@ -197,7 +219,7 @@ export default function CreateAlbumModal({ isOpen, onClose, onCreate, tracks }: 
             <div className="relative z-10">
               {/* Header — step indicator doubles as title */}
               <h2 className="text-2xl md:text-3xl font-bold mb-1 tracking-tighter text-spotify-text">
-                {step === 'details' ? 'New Album' : 'Add Tracks'}
+                {step === 'details' ? (isEditing ? 'Edit Album' : 'New Album') : 'Add Tracks'}
               </h2>
               <p className="text-spotify-text-muted opacity-60 font-medium text-sm mb-8">
                 {step === 'details'
@@ -411,7 +433,7 @@ export default function CreateAlbumModal({ isOpen, onClose, onCreate, tracks }: 
                       ) : (
                         <>
                           <Disc3 size={16} />
-                          <span>Create Album{selectedTrackIds.length > 0 ? ` · ${selectedTrackIds.length} tracks` : ''}</span>
+                          <span>{isEditing ? 'Save Changes' : 'Create Album'}{selectedTrackIds.length > 0 ? ` · ${selectedTrackIds.length} tracks` : ''}</span>
                         </>
                       )}
                     </button>

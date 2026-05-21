@@ -390,6 +390,20 @@ export default function UploadModal({ isOpen, onClose, onUpload, onUpdate, userP
             </AnimatePresence>
 
             <div className="relative z-10 flex-1 min-h-0 flex flex-col">
+              <input
+                ref={audioInputRef}
+                type="file"
+                accept="audio/*,audio/mpeg,.mp3,video/mp4"
+                multiple
+                onChange={(e) => {
+                  if (e.target.files && e.target.files.length > 0) {
+                    handleFilesSelect(e.target.files);
+                    // Reset value so selecting the same file again works
+                    e.target.value = '';
+                  }
+                }}
+                className="hidden"
+              />
               {step === 'upload' ? (
                 <div
                   onDragEnter={handleDrag}
@@ -403,14 +417,6 @@ export default function UploadModal({ isOpen, onClose, onUpload, onUpdate, userP
                       : 'border-white/10 hover:border-white/20 bg-white/[0.03] hover:bg-white/[0.06]'
                   }`}
                 >
-                  <input
-                    ref={audioInputRef}
-                    type="file"
-                    accept="audio/*,audio/mpeg,.mp3,video/mp4"
-                    multiple
-                    onChange={(e) => e.target.files && handleFilesSelect(e.target.files)}
-                    className="hidden"
-                  />
                   <div className="w-20 h-20 liquid-glass rounded-3xl flex items-center justify-center text-spotify-text-muted group-hover:text-spotify-green transition-all shadow-xl group-hover:rotate-12">
                     <Upload size={32} />
                   </div>

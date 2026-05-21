@@ -18,12 +18,13 @@ import AlbumsView from './components/AlbumsView';
 import AlbumDetailView from './components/AlbumDetailView';
 import PlaylistsView from './components/PlaylistsView';
 import PlaylistDetailView from './components/PlaylistDetailView';
+import SocialView from './components/SocialView';
 import CreatePlaylistModal from './components/CreatePlaylistModal';
 import CreateAlbumModal from './components/CreateAlbumModal';
 import AlbumCard from './components/AlbumCard';
 import PlaylistCard from './components/PlaylistCard';
 import { Track, View, UserProfile, Album, PlaylistMeta, PlaybackContext } from './types';
-import { supabase, fetchProfile, fetchAlbums, fetchPlaylists, createPlaylist, addTrackToPlaylist, createAlbum, addTrackToAlbum, deleteAlbum, removeTrackFromAlbum } from './lib/supabase';
+import { supabase, fetchProfile, fetchAlbums, fetchPlaylists, createPlaylist, addTrackToPlaylist, createAlbum, addTrackToAlbum, deleteAlbum, removeTrackFromAlbum, updateAlbum, syncAlbumTracks } from './lib/supabase';
 import { User } from '@supabase/supabase-js';
 import { isFounder, isOwner } from './constants';
 import { ComingSoonProvider } from './components/ComingSoonToast';
@@ -52,6 +53,7 @@ export default function App() {
   const [pendingPlaylistTrackId, setPendingPlaylistTrackId] = useState<string | null>(null);
   // Album creation modal — mirrors the playlist pattern
   const [isCreateAlbumOpen, setIsCreateAlbumOpen] = useState(false);
+  const [editingAlbum, setEditingAlbum] = useState<{ album: Album; trackIds: string[] } | null>(null);
 
   // ─── Playback Context ────────────────────────────────
   const [playbackContext, setPlaybackContext] = useState<PlaybackContext | null>(null);
@@ -437,6 +439,8 @@ export default function App() {
 
   const renderContent = () => {
     switch (currentView) {
+      case 'social':
+        return <SocialView />;
       case 'explore':
         return <ExploreView tracks={filteredTracks} onPlay={handlePlay} />;
       case 'library':
@@ -525,6 +529,7 @@ export default function App() {
                 // Not returning anything, but component state will update if needed
               }
             }}
+            onEditAlbum={(album, trackIds) => setEditingAlbum({ album, trackIds })}
           />
         ) : null;
       case 'playlists':
@@ -693,6 +698,7 @@ export default function App() {
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           onViewChange={setCurrentView}
+          onSocialClick={() => setCurrentView('social')}
         />
 
         <div className="mobile-content-padding px-4 md:px-12 py-6 md:py-10 pb-48 md:pb-56">
@@ -758,10 +764,13 @@ export default function App() {
 
       {/* Album creation modal — same rendering pattern as playlist modal */}
       <AnimatePresence>
-        {isCreateAlbumOpen && (
+        {(isCreateAlbumOpen || editingAlbum) && (
           <CreateAlbumModal
-            isOpen={isCreateAlbumOpen}
-            onClose={() => setIsCreateAlbumOpen(false)}
+            isOpen={isCreateAlbumOpen || !!editingAlbum}
+            onClose={() => {
+              setIsCreateAlbumOpen(false);
+              setEditingAlbum(null);
+            }}
             onCreate={async (albumData, trackIds) => {
               if (!user) return;
               // Create the album record first
@@ -780,6 +789,23 @@ export default function App() {
               const fresh = await fetchAlbums();
               setAlbums(fresh);
             }}
+            onUpdate={async (albumData, trackIds) => {
+              if (!user || !editingAlbum) return;
+              
+              const updatedAlbum = await updateAlbum(editingAlbum.album.id, albumData);
+              if (updatedAlbum) {
+                await syncAlbumTracks(editingAlbum.album.id, trackIds);
+                
+                // Refresh data
+                const fresh = await fetchAlbums();
+                setAlbums(fresh);
+                if (selectedAlbum?.id === editingAlbum.album.id) {
+                  setSelectedAlbum(updatedAlbum);
+                }
+              }
+            }}
+            editAlbum={editingAlbum?.album}
+            initialTrackIds={editingAlbum?.trackIds}
             tracks={tracks}
           />
         )}

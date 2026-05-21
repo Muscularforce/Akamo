@@ -1,5 +1,5 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { UserProfile, Album, AlbumTrack, PlaylistMeta, PlaylistTrack, Track } from '../types';
+import { UserProfile, Album, AlbumTrack, PlaylistMeta, PlaylistTrack, Track, Notification, UserStat } from '../types';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -244,6 +244,52 @@ export async function removeTrackFromAlbum(
   return true;
 }
 
+/** Sync album tracks — deletes existing and inserts new ones */
+export async function syncAlbumTracks(
+  albumId: string,
+  trackIds: string[]
+): Promise<boolean> {
+  // 1. Delete existing tracks
+  const { error: deleteError } = await supabase
+    .from('album_tracks')
+    .delete()
+    .eq('albumId', albumId);
+
+  if (deleteError) {
+    console.error('[Akamo] syncAlbumTracks delete failed:', deleteError);
+    return false;
+  }
+
+  // Clear FK from all tracks that used to belong to this album
+  await supabase.from('tracks').update({ albumId: null }).eq('albumId', albumId);
+
+  if (trackIds.length === 0) return true;
+
+  // 2. Insert new tracks with their order
+  const newTracks = trackIds.map((trackId, index) => ({
+    albumId,
+    trackId,
+    trackNumber: index + 1
+  }));
+
+  const { error: insertError } = await supabase
+    .from('album_tracks')
+    .insert(newTracks);
+
+  if (insertError) {
+    console.error('[Akamo] syncAlbumTracks insert failed:', insertError);
+    return false;
+  }
+
+  // 3. Set the albumId FK on the tracks
+  const fkUpdates = trackIds.map(trackId => 
+    supabase.from('tracks').update({ albumId }).eq('id', trackId)
+  );
+  await Promise.all(fkUpdates);
+
+  return true;
+}
+
 // ─── Playlist Helpers ───────────────────────────────────────────────────────
 
 /** Fetch all playlists for a user */
@@ -440,4 +486,46 @@ export async function reorderPlaylistTracks(
   }
 
   return true;
+}
+
+// ─── Notification Helpers ───────────────────────────────────────────────────
+
+export async function fetchNotifications(): Promise<Notification[]> {
+  const { data, error } = await supabase
+    .from('notifications')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('[Akamo] fetchNotifications failed:', error);
+    return [];
+  }
+  return data as Notification[];
+}
+
+export async function createNotification(content: string, authorId: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('notifications')
+    .insert({ content, author_id: authorId });
+
+  if (error) {
+    console.error('[Akamo] createNotification failed:', error);
+    return false;
+  }
+  return true;
+}
+
+// ─── Social Helpers ─────────────────────────────────────────────────────────
+
+export async function fetchUserStats(): Promise<UserStat[]> {
+  const { data, error } = await supabase
+    .from('user_stats')
+    .select('*')
+    .order('upload_count', { ascending: false });
+
+  if (error) {
+    console.error('[Akamo] fetchUserStats failed:', error);
+    return [];
+  }
+  return data as UserStat[];
 }

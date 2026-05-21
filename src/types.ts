@@ -1,5 +1,5 @@
 export type View = 'home' | 'explore' | 'library' | 'favorites' | 'auth' | 'verified' | 'account'
-  | 'albums' | 'album-detail' | 'playlists' | 'playlist-detail';
+  | 'albums' | 'album-detail' | 'playlists' | 'playlist-detail' | 'social';
 
 export interface UserProfile {
   id: string;
@@ -7,6 +7,14 @@ export interface UserProfile {
   avatar_url: string | null;
   role: 'user' | 'owner';
   created_at?: string;
+}
+
+export interface UserStat {
+  user_id: string;
+  display_name: string;
+  avatar_url: string | null;
+  role: 'user' | 'owner';
+  upload_count: number;
 }
 
 export interface Track {
@@ -88,4 +96,11 @@ export interface PlaybackContext {
   isShuffled: boolean;
   /** The original (unshuffled) order, so we can un-shuffle. */
   originalOrder?: Track[];
+}
+
+export interface Notification {
+  id: string;
+  created_at: string;
+  content: string;
+  author_id: string;
 }

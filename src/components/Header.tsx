@@ -1,10 +1,10 @@
-import { ChevronLeft, ChevronRight, Bell, User as UserIcon, LogOut, Upload, Settings, Moon, Heart, Search as SearchIcon } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Bell, User as UserIcon, LogOut, Upload, Settings, Moon, Heart, Search as SearchIcon, Send, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import React, { useState, useEffect, useRef } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, fetchNotifications, createNotification } from '../lib/supabase';
 import { User } from '@supabase/supabase-js';
 import { isOwner } from '../constants';
-import { UserProfile } from '../types';
+import { UserProfile, Notification } from '../types';
 import AuroraBadge from './AuroraBadge';
 import { useComingSoon } from './ComingSoonToast';
 
@@ -18,9 +18,10 @@ interface HeaderProps {
     searchQuery: string;
     onSearchChange: (query: string) => void;
     onViewChange: (view: 'account') => void;
+    onSocialClick: () => void;
 }
 
-export default function Header({ onUploadClick, onLoginClick, currentTheme, onThemeChange, user, userProfile, searchQuery, onSearchChange, onViewChange }: HeaderProps) {
+export default function Header({ onUploadClick, onLoginClick, currentTheme, onThemeChange, user, userProfile, searchQuery, onSearchChange, onViewChange, onSocialClick }: HeaderProps) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const settingsRef = useRef<HTMLDivElement>(null);
@@ -28,6 +29,25 @@ export default function Header({ onUploadClick, onLoginClick, currentTheme, onTh
   const [isScrolled, setIsScrolled] = useState(false);
   const isCreator = isOwner(userProfile?.role);
   const { triggerComingSoon } = useComingSoon();
+
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const notificationsRef = useRef<HTMLDivElement>(null);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [expandedNotifs, setExpandedNotifs] = useState<Set<string>>(new Set());
+  const [newUpdateContent, setNewUpdateContent] = useState('');
+  const [isSubmittingUpdate, setIsSubmittingUpdate] = useState(false);
+
+  useEffect(() => {
+    fetchNotifications().then(setNotifications);
+
+    const channel = supabase.channel('notifications-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => {
+        fetchNotifications().then(setNotifications);
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, []);
 
   useEffect(() => {
     const mainElement = document.querySelector('main');
@@ -59,13 +79,16 @@ export default function Header({ onUploadClick, onLoginClick, currentTheme, onTh
       if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
         setIsProfileOpen(false);
       }
+      if (notificationsRef.current && !notificationsRef.current.contains(event.target as Node)) {
+        setIsNotificationsOpen(false);
+      }
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   return (
-    <header className={`h-16 md:h-20 flex items-center justify-between px-4 md:px-8 sticky top-0 z-40 transition-all duration-500 gap-3 md:gap-8 ${isScrolled ? 'bg-spotify-black/60 backdrop-blur-3xl border-b border-white/5' : 'bg-transparent'}`}>
+    <header className={`h-16 md:h-20 flex items-center justify-between px-4 md:px-8 sticky top-0 z-40 transition-all duration-500 gap-3 md:gap-8 ${isScrolled ? 'bg-spotify-black/95 supports-[backdrop-filter]:bg-spotify-black/60 backdrop-blur-3xl border-b border-white/5' : 'bg-gradient-to-b from-spotify-black/80 to-transparent md:bg-transparent'}`}>
       {/* Nav arrows — hidden on mobile */}
       <div className="hidden md:flex items-center gap-4 shrink-0">
         <button onClick={triggerComingSoon} className="w-10 h-10 rounded-full bg-black/40 flex items-center justify-center text-spotify-text-muted hover:text-spotify-text transition-colors border border-white/5">
@@ -95,6 +118,17 @@ export default function Header({ onUploadClick, onLoginClick, currentTheme, onTh
       <div className="flex items-center gap-2 md:gap-6 shrink-0">
         {user ? (
           <>
+            {/* Social Button */}
+            <motion.button
+                whileHover={{ scale: 1.05, y: -2 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={onSocialClick}
+                className="liquid-glass hidden md:flex items-center gap-2 text-white px-4 py-2 rounded-full text-[11px] font-bold transition-all border border-spotify-green/70 shadow-[0_0_15px_rgba(29,185,84,0.4)] hover:shadow-[0_0_25px_rgba(29,185,84,0.7)] hover:border-spotify-green relative overflow-hidden group"
+            >
+                <div className="absolute inset-0 bg-spotify-green/10 animate-pulse pointer-events-none" />
+                <span className="gpu-accelerated relative z-10 text-shadow-sm">Social</span>
+            </motion.button>
+
             {/* Upload button — uses theme variable for Pink Flamingo support */}
             <motion.button
                 whileHover={{ scale: 1.05, y: -2 }}
@@ -107,10 +141,125 @@ export default function Header({ onUploadClick, onLoginClick, currentTheme, onTh
                 <span className="uppercase tracking-widest hidden sm:inline">Upload</span>
             </motion.button>
 
-            {/* Bell — now wired to easter egg */}
-            <button onClick={triggerComingSoon} className="text-spotify-text-muted hover:text-spotify-text transition-all p-2 hover:bg-white/5 rounded-full hidden md:flex items-center justify-center">
+            {/* Bell */}
+            <div className="relative" ref={notificationsRef}>
+              <button 
+                onClick={() => setIsNotificationsOpen(!isNotificationsOpen)} 
+                className={`text-spotify-text-muted hover:text-spotify-text transition-all p-2 rounded-full hidden md:flex items-center justify-center ${isNotificationsOpen ? 'bg-white/10 text-spotify-text' : 'hover:bg-white/5'}`}
+              >
                 <Bell size={20} />
-            </button>
+              </button>
+
+              <AnimatePresence>
+                {isNotificationsOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                    className="absolute right-0 top-14 w-80 md:w-96 liquid-glass rounded-2xl p-4 z-50 overflow-hidden shadow-[0_30px_60px_rgba(0,0,0,0.8)] border border-white/10 flex flex-col max-h-[70vh]"
+                  >
+                    <div className="flex items-center justify-between mb-4 shrink-0">
+                      <h3 className="font-bold text-lg text-spotify-text tracking-tight">Updates</h3>
+                    </div>
+
+                    {isCreator && (
+                      <div className="mb-4 shrink-0">
+                        <textarea
+                          value={newUpdateContent}
+                          onChange={(e) => setNewUpdateContent(e.target.value)}
+                          placeholder="Share an update..."
+                          className="w-full h-20 bg-white/5 border border-white/10 rounded-xl p-3 text-sm text-spotify-text placeholder:text-spotify-text-muted focus:outline-none focus:border-spotify-green focus:ring-1 focus:ring-spotify-green resize-none transition-all"
+                        />
+                        <div className="flex justify-end mt-2">
+                          <button
+                            disabled={!newUpdateContent.trim() || isSubmittingUpdate}
+                            onClick={async () => {
+                              if (!user || !newUpdateContent.trim()) return;
+                              setIsSubmittingUpdate(true);
+                              const success = await createNotification(newUpdateContent.trim(), user.id);
+                              if (success) setNewUpdateContent('');
+                              setIsSubmittingUpdate(false);
+                            }}
+                            className="bg-spotify-green text-black px-4 py-1.5 rounded-full text-xs font-bold hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:hover:scale-100 flex items-center gap-1.5"
+                          >
+                            <Send size={12} />
+                            Post
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex-1 overflow-y-auto no-scrollbar space-y-3 -mx-2 px-2 pb-2">
+                      {notifications.length === 0 ? (
+                        <div className="text-center py-8 text-spotify-text-muted text-sm">
+                          No updates yet
+                        </div>
+                      ) : (
+                        notifications.map((n) => {
+                          const isExpanded = expandedNotifs.has(n.id);
+                          const toggleExpand = () => {
+                            const next = new Set(expandedNotifs);
+                            if (next.has(n.id)) next.delete(n.id);
+                            else next.add(n.id);
+                            setExpandedNotifs(next);
+                          };
+                          
+                          const lines = n.content.trim().split('\n');
+                          const titleLine = lines[0];
+                          const hasLogs = lines.length > 1;
+                          
+                          return (
+                          <div key={n.id} className="bg-white/5 border border-white/5 rounded-xl p-3 hover:bg-white/10 transition-colors">
+                            <div className="flex items-center gap-2 mb-2">
+                              <AuroraBadge size="sm" />
+                              <span className="text-[10px] text-spotify-text-muted flex items-center gap-1">
+                                <Clock size={10} />
+                                {new Date(n.created_at).toLocaleDateString()}
+                              </span>
+                            </div>
+                            
+                            <p className="text-sm font-bold text-white mb-2">{titleLine}</p>
+                            
+                            {hasLogs && (
+                              <button 
+                                onClick={toggleExpand}
+                                className="text-[10px] uppercase tracking-widest text-spotify-green hover:text-white transition-colors font-bold mb-2 flex items-center gap-1"
+                              >
+                                {isExpanded ? 'Hide Logs' : 'View Logs'}
+                              </button>
+                            )}
+
+                            <AnimatePresence>
+                              {isExpanded && hasLogs && (
+                                <motion.div 
+                                  initial={{ height: 0, opacity: 0 }}
+                                  animate={{ height: 'auto', opacity: 1 }}
+                                  exit={{ height: 0, opacity: 0 }}
+                                  className="overflow-hidden"
+                                >
+                                  <div className="bg-[#1e1e1e] border border-white/10 rounded-lg p-3 font-mono text-xs space-y-1 shadow-inner mt-2">
+                                    {lines.slice(1).map((line, i) => {
+                                      if (!line.trim()) return <div key={i} className="h-2" />;
+                                      const isAdd = line.trim().startsWith('+');
+                                      const isRemove = line.trim().startsWith('-');
+                                      return (
+                                        <div key={i} className={`whitespace-pre-wrap ${isAdd ? 'text-green-400' : isRemove ? 'text-red-400' : 'text-gray-300'}`}>
+                                          {line}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </div>
+                        )})
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
 
             {/* Settings dropdown */}
             <div className="relative" ref={settingsRef}>
@@ -189,7 +338,9 @@ export default function Header({ onUploadClick, onLoginClick, currentTheme, onTh
                   >
                     <div className="px-4 py-3 mb-2 border-b border-white/5">
                       <div className="flex items-center gap-2 mb-1">
-                        <p className="text-xs font-bold text-spotify-text truncate">{userProfile?.display_name || user.user_metadata?.full_name || 'User'}</p>
+                        <p className={`text-xs font-bold truncate max-w-[120px] ${isCreator ? 'aurora-text drop-shadow-[0_0_10px_rgba(255,0,110,0.6)] text-[13px] tracking-wide' : 'text-spotify-text'}`}>
+                          {userProfile?.display_name || user.user_metadata?.full_name || 'User'}
+                        </p>
                         {isCreator && <AuroraBadge size="sm" />}
                       </div>
                       <p className="text-[10px] text-spotify-text-muted truncate opacity-60 tracking-wider uppercase">{user.email}</p>
@@ -209,12 +360,6 @@ export default function Header({ onUploadClick, onLoginClick, currentTheme, onTh
                       className="w-full text-left px-4 py-2.5 text-[11px] hover:bg-white/10 rounded-xl transition-all flex items-center justify-between group"
                     >
                         <span className="group-hover:translate-x-1 transition-transform">Account Settings</span>
-                    </button>
-                    <button 
-                      onClick={() => { setIsProfileOpen(false); triggerComingSoon(); }}
-                      className="w-full text-left px-4 py-2.5 text-[11px] hover:bg-white/10 rounded-xl transition-all flex items-center justify-between group"
-                    >
-                        <span className="group-hover:translate-x-1 transition-transform">Profile</span>
                     </button>
                     <div className="h-[1px] bg-white/5 my-2" />
                     <button 

@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'motion/react';
-import { Play, Shuffle, ArrowLeft, Clock, Music, MoreHorizontal, ListPlus, Settings, Trash2, X } from 'lucide-react';
+import { Play, Shuffle, ArrowLeft, Clock, Music, MoreHorizontal, ListPlus, Settings, Trash2, X, Edit3 } from 'lucide-react';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Album, AlbumTrack, Track, PlaylistMeta } from '../types';
@@ -19,6 +19,7 @@ interface AlbumDetailViewProps {
   isOwner?: boolean;
   onAlbumDeleted?: (albumId: string) => void;
   onRemoveTrackFromAlbum?: (trackId: string, albumId: string) => void;
+  onEditAlbum?: (album: Album, trackIds: string[]) => void;
 }
 
 function TrackRowMenu({
@@ -153,6 +154,7 @@ export default function AlbumDetailView({
   isOwner,
   onAlbumDeleted,
   onRemoveTrackFromAlbum,
+  onEditAlbum,
 }: AlbumDetailViewProps) {
   const [albumTracks, setAlbumTracks] = useState<AlbumTrack[]>([]);
   const [loading, setLoading] = useState(true);
@@ -281,6 +283,16 @@ export default function AlbumDetailView({
                 className="mt-4 overflow-hidden"
               >
                 <div className="liquid-glass rounded-2xl p-4 space-y-3 border border-white/5">
+                  <button
+                    onClick={() => {
+                      if (onEditAlbum) onEditAlbum(album, albumTracks.map(at => at.trackId));
+                      setShowSettings(false);
+                    }}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 text-left text-sm hover:bg-white/10 rounded-xl transition-all text-spotify-text font-medium"
+                  >
+                    <Edit3 size={16} />
+                    <span>Edit Album</span>
+                  </button>
                   <button
                     onClick={async () => {
                       if (confirm('Are you sure you want to delete this album? This cannot be undone.')) {
