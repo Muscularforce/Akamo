@@ -34,7 +34,7 @@ const ScrollingText = ({ text, className, speed = 30 }: { text: string; classNam
   }, [text]);
 
   return (
-    <div ref={containerRef} className={`${className} overflow-hidden whitespace-nowrap relative`}>
+    <div ref={containerRef} className={`${className} overflow-hidden whitespace-nowrap relative flex`}>
       <motion.div
         animate={shouldScroll ? { x: [0, -(textRef.current?.offsetWidth || 0) - 40] } : { x: 0 }}
         transition={{
@@ -43,9 +43,9 @@ const ScrollingText = ({ text, className, speed = 30 }: { text: string; classNam
           ease: "linear",
           repeatDelay: 1.5
         }}
-        className="inline-block"
+        className={`inline-block ${!shouldScroll ? 'truncate w-full' : ''}`}
       >
-        <span ref={textRef} className="inline-block pr-10">{text}</span>
+        <span ref={textRef} className={`inline-block ${shouldScroll ? 'pr-10' : 'truncate w-full'}`}>{text}</span>
         {shouldScroll && <span className="inline-block pr-10">{text}</span>}
       </motion.div>
     </div>
@@ -177,20 +177,20 @@ export default function Player({ currentTrack, isPlaying, onTogglePlay, onNext, 
                 exit={{ opacity: 0, scale: 0.8, x: 20 }}
                 className="flex items-center gap-2 md:gap-5 w-full min-w-0"
               >
-                <div className="player-cover w-11 h-11 md:w-16 md:h-16 rounded-xl md:rounded-2xl overflow-hidden shadow-[0_10px_30px_rgba(0,0,0,0.5)] flex-shrink-0 group-hover/player:scale-105 transition-transform duration-500 relative"
+                <div className="player-cover w-10 h-10 md:w-16 md:h-16 rounded-xl md:rounded-2xl overflow-hidden shadow-[0_10px_30px_rgba(0,0,0,0.5)] flex-shrink-0 group-hover/player:scale-105 transition-transform duration-500 relative"
                 >
                   <img src={currentTrack.coverUrl} alt={currentTrack.title} className="w-full h-full object-cover" />
                 </div>
-                <div className="flex flex-col flex-1 min-w-0">
+                <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
                   <ScrollingText 
                     text={currentTrack.title} 
-                    className="text-xs md:text-base font-bold text-spotify-text hover:text-spotify-green transition-colors cursor-pointer tracking-tight" 
+                    className="text-xs md:text-base font-bold text-spotify-text hover:text-spotify-green transition-colors cursor-pointer tracking-tight block w-full truncate" 
                   />
-                  <div className="flex flex-col min-w-0">
-                    <div className="flex items-center gap-2 min-w-0">
+                  <div className="flex flex-col min-w-0 overflow-hidden">
+                    <div className="flex items-center gap-2 min-w-0 overflow-hidden">
                       <ScrollingText 
                         text={currentTrack.artist} 
-                        className="text-[10px] md:text-xs text-spotify-text-muted hover:text-spotify-text transition-colors cursor-pointer opacity-70 tracking-wide font-medium min-w-0" 
+                        className="text-[10px] md:text-xs text-spotify-text-muted hover:text-spotify-text transition-colors cursor-pointer opacity-70 tracking-wide font-medium min-w-0 block w-full truncate" 
                         speed={20}
                       />
                       {isCreator && (
@@ -213,9 +213,9 @@ export default function Player({ currentTrack, isPlaying, onTogglePlay, onNext, 
                 </div>
               </motion.div>
             ) : (
-              <div className="flex items-center gap-3 md:gap-5 opacity-20">
-                 <div className="w-11 h-11 md:w-16 md:h-16 bg-white/10 rounded-xl md:rounded-2xl" />
-                 <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-3 md:gap-5 opacity-20 w-full min-w-0">
+                 <div className="w-10 h-10 md:w-16 md:h-16 bg-white/10 rounded-xl md:rounded-2xl flex-shrink-0" />
+                 <div className="flex flex-col gap-2 flex-1 min-w-0">
                    <div className="w-20 md:w-32 h-3 md:h-4 bg-white/10 rounded-full" />
                    <div className="w-14 md:w-20 h-2 md:h-3 bg-white/10 rounded-full" />
                  </div>

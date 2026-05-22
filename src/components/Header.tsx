@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Bell, User as UserIcon, LogOut, Upload, Settings, Moon, Heart, Search as SearchIcon, Send, Clock } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Bell, User as UserIcon, LogOut, Upload, Settings, Moon, Heart, Search as SearchIcon, Send, Clock, Users } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase, fetchNotifications, createNotification } from '../lib/supabase';
@@ -115,7 +115,7 @@ export default function Header({ onUploadClick, onLoginClick, currentTheme, onTh
         </div>
       </div>
 
-      <div className="flex items-center gap-2 md:gap-6 shrink-0">
+      <div className="flex items-center gap-1.5 sm:gap-2 md:gap-6 shrink-0">
         {user ? (
           <>
             {/* Social Button */}
@@ -123,10 +123,11 @@ export default function Header({ onUploadClick, onLoginClick, currentTheme, onTh
                 whileHover={{ scale: 1.05, y: -2 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={onSocialClick}
-                className="liquid-glass hidden md:flex items-center gap-2 text-white px-4 py-2 rounded-full text-[11px] font-bold transition-all border border-spotify-green/70 shadow-[0_0_15px_rgba(29,185,84,0.4)] hover:shadow-[0_0_25px_rgba(29,185,84,0.7)] hover:border-spotify-green relative overflow-hidden group"
+                className="liquid-glass flex items-center gap-1.5 md:gap-2 text-white px-2.5 sm:px-3 md:px-4 py-2 rounded-full text-[11px] font-bold transition-all border border-spotify-green/70 shadow-[0_0_15px_rgba(29,185,84,0.4)] hover:shadow-[0_0_25px_rgba(29,185,84,0.7)] hover:border-spotify-green relative overflow-hidden group"
             >
                 <div className="absolute inset-0 bg-spotify-green/10 animate-pulse pointer-events-none" />
-                <span className="gpu-accelerated relative z-10 text-shadow-sm">Social</span>
+                <Users size={14} className="relative z-10" />
+                <span className="gpu-accelerated relative z-10 text-shadow-sm hidden sm:inline">Social</span>
             </motion.button>
 
             {/* Upload button — uses theme variable for Pink Flamingo support */}
@@ -134,7 +135,7 @@ export default function Header({ onUploadClick, onLoginClick, currentTheme, onTh
                 whileHover={{ scale: 1.05, y: -2 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={onUploadClick}
-                className="accent-shimmer flex items-center gap-2 text-black px-3 md:px-5 py-2 rounded-full text-[11px] font-bold transition-all"
+                className="accent-shimmer flex items-center gap-1.5 md:gap-2 text-black px-2.5 sm:px-3 md:px-5 py-2 rounded-full text-[11px] font-bold transition-all"
                 style={{ background: 'var(--accent-gradient)', boxShadow: 'var(--accent-glow)' }}
             >
                 <Upload size={14} />
@@ -145,7 +146,7 @@ export default function Header({ onUploadClick, onLoginClick, currentTheme, onTh
             <div className="relative" ref={notificationsRef}>
               <button 
                 onClick={() => setIsNotificationsOpen(!isNotificationsOpen)} 
-                className={`text-spotify-text-muted hover:text-spotify-text transition-all p-2 rounded-full hidden md:flex items-center justify-center ${isNotificationsOpen ? 'bg-white/10 text-spotify-text' : 'hover:bg-white/5'}`}
+                className={`text-spotify-text-muted hover:text-spotify-text transition-all p-1.5 sm:p-2 rounded-full flex items-center justify-center ${isNotificationsOpen ? 'bg-white/10 text-spotify-text' : 'hover:bg-white/5'}`}
               >
                 <Bell size={20} />
               </button>
@@ -265,7 +266,7 @@ export default function Header({ onUploadClick, onLoginClick, currentTheme, onTh
             <div className="relative" ref={settingsRef}>
               <button 
                 onClick={() => setIsSettingsOpen(!isSettingsOpen)}
-                className={`text-spotify-text-muted hover:text-spotify-text transition-all p-2 rounded-full ${isSettingsOpen ? 'bg-white/10 text-spotify-text' : 'hover:bg-white/5'}`}
+                className={`text-spotify-text-muted hover:text-spotify-text transition-all p-1.5 sm:p-2 rounded-full flex items-center justify-center ${isSettingsOpen ? 'bg-white/10 text-spotify-text' : 'hover:bg-white/5'}`}
               >
                 <Settings size={18} className={isSettingsOpen ? 'rotate-90 transition-transform duration-500' : 'transition-transform duration-500'} />
               </button>
