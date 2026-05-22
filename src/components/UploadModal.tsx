@@ -189,12 +189,38 @@ export default function UploadModal({ isOpen, onClose, onUpload, onUpdate, userP
         if (draft.coverFile) {
           setUploadPhase('cover');
           setUploadProgress(40);
-          const timestamp = Date.now();
+          
+          // --- GOOGLE DRIVE UPLOAD PIPELINE ---
+          const { data: tokenData, error: tokenError } = await supabase.functions.invoke('get-drive-token');
+          if (tokenError || !tokenData?.accessToken) throw new Error('Failed to securely handshake with Google Drive.');
+          const accessToken = tokenData.accessToken;
+
           const coverExt = draft.coverFile.name.split('.').pop() || 'jpg';
-          newCoverPath = `${userId}/${timestamp}-cover.${coverExt}`;
-          const { error: coverError } = await supabase.storage.from('songs').upload(newCoverPath, draft.coverFile, { upsert: true });
-          if (coverError) throw coverError;
-          newCoverUrl = supabase.storage.from('songs').getPublicUrl(newCoverPath).data.publicUrl;
+          const coverName = `${userId}-${timestamp}-cover.${coverExt}`;
+
+          const metadata = { name: coverName, parents: ['1gVrrtcHtiJuTJpsgvvgl-amY8Pf2Z7ST'] };
+          const form = new FormData();
+          form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+          form.append('file', draft.coverFile);
+
+          const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${accessToken}` },
+            body: form
+          });
+
+          if (!res.ok) throw new Error('Failed to upload cover to Google Drive');
+          const data = await res.json();
+          newCoverPath = data.id;
+
+          // Set public permissions
+          await fetch(`https://www.googleapis.com/drive/v3/files/${data.id}/permissions`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ role: 'reader', type: 'anyone' })
+          });
+
+          newCoverUrl = `https://drive.google.com/uc?export=download&id=${data.id}`;
         }
 
         setUploadPhase('saving');
@@ -220,6 +246,39 @@ export default function UploadModal({ isOpen, onClose, onUpload, onUpdate, userP
           
           const timestamp = Date.now() + i; // unique timestamp
 
+          // 1. Secure Handshake with Google
+          const { data: tokenData, error: tokenError } = await supabase.functions.invoke('get-drive-token');
+          if (tokenError || !tokenData?.accessToken) throw new Error('Failed to securely handshake with Google Drive.');
+          const accessToken = tokenData.accessToken;
+
+          // Helper to upload to Google Drive
+          const uploadToDrive = async (file: File, name: string) => {
+            const metadata = { name, parents: ['1gVrrtcHtiJuTJpsgvvgl-amY8Pf2Z7ST'] };
+            const form = new FormData();
+            form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+            form.append('file', file);
+
+            const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+              method: 'POST',
+              headers: { 'Authorization': `Bearer ${accessToken}` },
+              body: form
+            });
+
+            if (!res.ok) throw new Error('Google Drive upload rejected');
+            const data = await res.json();
+            
+            await fetch(`https://www.googleapis.com/drive/v3/files/${data.id}/permissions`, {
+              method: 'POST',
+              headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ role: 'reader', type: 'anyone' })
+            });
+
+            return {
+              path: data.id,
+              url: `https://drive.google.com/uc?export=download&id=${data.id}`
+            };
+          };
+
           // Upload Cover
           setUploadPhase('cover');
           setUploadProgress(baseProgress + (chunk * 0.2));
@@ -227,21 +286,18 @@ export default function UploadModal({ isOpen, onClose, onUpload, onUpdate, userP
           let coverUrl = '';
           if (draft.coverFile) {
             const coverExt = draft.coverFile.name.split('.').pop() || 'jpg';
-            coverPath = `${userId}/${timestamp}-cover.${coverExt}`;
-            const { error: coverError } = await supabase.storage.from('songs').upload(coverPath, draft.coverFile, { upsert: true });
-            if (coverError) throw coverError;
-            coverUrl = supabase.storage.from('songs').getPublicUrl(coverPath).data.publicUrl;
+            const coverRes = await uploadToDrive(draft.coverFile, `${userId}-${timestamp}-cover.${coverExt}`);
+            coverPath = coverRes.path;
+            coverUrl = coverRes.url;
           }
 
           // Upload Audio
           setUploadPhase('audio');
           setUploadProgress(baseProgress + (chunk * 0.6));
           const audioExt = draft.audioFile!.name.split('.').pop() || 'mp3';
-          const audioPath = `${userId}/${timestamp}-audio.${audioExt}`;
-          const { error: audioError } = await supabase.storage.from('songs').upload(audioPath, draft.audioFile!, { upsert: true });
-          if (audioError) throw audioError;
-          
-          const audioUrl = supabase.storage.from('songs').getPublicUrl(audioPath).data.publicUrl;
+          const audioRes = await uploadToDrive(draft.audioFile!, `${userId}-${timestamp}-audio.${audioExt}`);
+          const audioPath = audioRes.path;
+          const audioUrl = audioRes.url;
 
           // Build track object
           setUploadPhase('saving');
