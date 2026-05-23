@@ -220,7 +220,7 @@ export default function UploadModal({ isOpen, onClose, onUpload, onUpdate, userP
             body: JSON.stringify({ role: 'reader', type: 'anyone' })
           });
 
-          newCoverUrl = `https://drive.google.com/uc?export=download&id=${data.id}`;
+          newCoverUrl = `https://drive.google.com/thumbnail?id=${data.id}&sz=w1000`;
         }
 
         setUploadPhase('saving');
@@ -288,7 +288,7 @@ export default function UploadModal({ isOpen, onClose, onUpload, onUpdate, userP
             const coverExt = draft.coverFile.name.split('.').pop() || 'jpg';
             const coverRes = await uploadToDrive(draft.coverFile, `${userId}-${timestamp}-cover.${coverExt}`);
             coverPath = coverRes.path;
-            coverUrl = coverRes.url;
+            coverUrl = `https://drive.google.com/thumbnail?id=${coverRes.path}&sz=w1000`;
           }
 
           // Upload Audio
@@ -297,7 +297,7 @@ export default function UploadModal({ isOpen, onClose, onUpload, onUpdate, userP
           const audioExt = draft.audioFile!.name.split('.').pop() || 'mp3';
           const audioRes = await uploadToDrive(draft.audioFile!, `${userId}-${timestamp}-audio.${audioExt}`);
           const audioPath = audioRes.path;
-          const audioUrl = audioRes.url;
+          const audioUrl = `https://olautjilfmaqnwpnvkqa.supabase.co/functions/v1/stream-track?id=${audioRes.path}`;
 
           // Build track object
           setUploadPhase('saving');

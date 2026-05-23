@@ -74,7 +74,7 @@ async function migrate() {
         const audioBuf = await audioRes.arrayBuffer();
         console.log('  -> Uploading audio to Drive...');
         const driveAudio = await uploadToDrive(audioBuf, `migrated-${track.id}.mp3`, 'audio/mpeg', accessToken);
-        newAudioUrl = driveAudio.url;
+        newAudioUrl = `https://olautjilfmaqnwpnvkqa.supabase.co/functions/v1/stream-track?id=${driveAudio.path}`;
         newAudioPath = driveAudio.path;
       }
 
@@ -85,7 +85,7 @@ async function migrate() {
         const coverBuf = await coverRes.arrayBuffer();
         console.log('  -> Uploading cover to Drive...');
         const driveCover = await uploadToDrive(coverBuf, `migrated-cover-${track.id}.jpg`, 'image/jpeg', accessToken);
-        newCoverUrl = driveCover.url;
+        newCoverUrl = `https://drive.google.com/thumbnail?id=${driveCover.path}&sz=w1000`;
         newCoverPath = driveCover.path;
       }
 

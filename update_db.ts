@@ -76,11 +76,11 @@ async function updateDb() {
     for (const [trackId, data] of trackMap.entries()) {
       const updates: any = {};
       if (data.audioId) {
-        updates.audioUrl = `https://drive.google.com/uc?export=download&id=${data.audioId}`;
+        updates.audioUrl = `https://olautjilfmaqnwpnvkqa.supabase.co/functions/v1/stream-track?id=${data.audioId}`;
         updates.audioPath = data.audioId;
       }
       if (data.coverId) {
-        updates.coverUrl = `https://drive.google.com/uc?export=download&id=${data.coverId}`;
+        updates.coverUrl = `https://drive.google.com/thumbnail?id=${data.coverId}&sz=w1000`;
         updates.coverPath = data.coverId;
       }
 
