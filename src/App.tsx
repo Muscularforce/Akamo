@@ -249,12 +249,13 @@ export default function App() {
   }, []);
 
   const handleNext = useCallback(() => {
-    if (playbackContext && playbackContext.tracks.length > 0) {
+    if (playbackContext && playbackContext.tracks.length > 1) {
       const nextIndex = (playbackContext.currentIndex + 1) % playbackContext.tracks.length;
       setPlaybackContext(prev => prev ? { ...prev, currentIndex: nextIndex } : null);
       setCurrentTrack(playbackContext.tracks[nextIndex]);
       setIsPlaying(true);
     } else {
+      setPlaybackContext(null);
       setCurrentTrack(prev => {
         const currentIndex = tracks.findIndex(t => t.id === prev?.id);
         const nextIndex = (currentIndex + 1) % tracks.length;
@@ -265,12 +266,13 @@ export default function App() {
   }, [tracks, playbackContext]);
 
   const handlePrev = useCallback(() => {
-    if (playbackContext && playbackContext.tracks.length > 0) {
+    if (playbackContext && playbackContext.tracks.length > 1) {
       const prevIndex = (playbackContext.currentIndex - 1 + playbackContext.tracks.length) % playbackContext.tracks.length;
       setPlaybackContext(prev => prev ? { ...prev, currentIndex: prevIndex } : null);
       setCurrentTrack(playbackContext.tracks[prevIndex]);
       setIsPlaying(true);
     } else {
+      setPlaybackContext(null);
       setCurrentTrack(prev => {
         const currentIndex = tracks.findIndex(t => t.id === prev?.id);
         const prevIndex = (currentIndex - 1 + tracks.length) % tracks.length;
