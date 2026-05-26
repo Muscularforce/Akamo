@@ -111,7 +111,12 @@ export default function UploadModal({ isOpen, onClose, onUpload, onUpdate, userP
   };
 
   const handleFilesSelect = (files: FileList | File[]) => {
-    const newFiles = Array.from(files).filter(f => f.type.startsWith('audio/') || f.type.startsWith('video/'));
+    const newFiles = Array.from(files).filter(f => {
+      const name = f.name.toLowerCase();
+      const ext = name.split('.').pop() || '';
+      const isAudioOrVideoExt = ['mp3', 'wav', 'ogg', 'm4a', 'flac', 'aac', 'mp4', 'webm'].includes(ext);
+      return f.type.startsWith('audio/') || f.type.startsWith('video/') || isAudioOrVideoExt;
+    });
     if (newFiles.length === 0) return;
     
     const filesToAdd = newFiles;
@@ -449,7 +454,7 @@ export default function UploadModal({ isOpen, onClose, onUpload, onUpdate, userP
               <input
                 ref={audioInputRef}
                 type="file"
-                accept="audio/*,audio/mpeg,.mp3,video/mp4"
+                accept="audio/*,audio/mpeg,.mp3,.wav,audio/wav,audio/x-wav,video/mp4"
                 multiple
                 onChange={(e) => {
                   if (e.target.files && e.target.files.length > 0) {
