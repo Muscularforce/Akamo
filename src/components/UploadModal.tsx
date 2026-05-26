@@ -484,6 +484,7 @@ export default function UploadModal({ isOpen, onClose, onUpload, onUpdate, userP
                   <div className="text-center">
                     <span className="block font-bold text-xl md:text-2xl tracking-tighter text-spotify-text">Synchronize Audio</span>
                     <span className="text-sm text-spotify-text-muted font-medium opacity-60">Drag assets here or select manually</span>
+                    <span className="block text-[10px] text-spotify-green font-bold uppercase tracking-widest mt-3 animate-pulse">WAV files are now supported</span>
                   </div>
                 </div>
               ) : (
