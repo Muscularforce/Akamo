@@ -154,7 +154,14 @@ export default function AuthPage({ onBack, onSuccess }: AuthPageProps) {
     try {
       let result;
       if (isSignup) {
-        result = await supabase.auth.signUp({ email, password, options: { data: { full_name: displayName.trim() } } });
+        result = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: { full_name: displayName.trim() },
+            emailRedirectTo: `${window.location.origin}/`
+          }
+        });
       } else {
         result = await supabase.auth.signInWithPassword({ email, password });
       }
@@ -171,7 +178,9 @@ export default function AuthPage({ onBack, onSuccess }: AuthPageProps) {
       }
 
       setIsSuccess(true);
-      setTimeout(onSuccess, 1200);
+      if (!isSignup) {
+        setTimeout(onSuccess, 1200);
+      }
     } catch (err: any) {
       clearTimeout(timeoutId);
       const message = err?.name === 'AbortError'
@@ -307,7 +316,7 @@ export default function AuthPage({ onBack, onSuccess }: AuthPageProps) {
                   key="success"
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="flex flex-col items-center py-12"
+                  className="flex flex-col items-center py-6 text-center"
                 >
                   <motion.div
                     initial={{ scale: 0 }}
@@ -324,16 +333,38 @@ export default function AuthPage({ onBack, onSuccess }: AuthPageProps) {
                     transition={{ delay: 0.3 }}
                     className="text-white font-bold text-lg"
                   >
-                    {isSignup ? 'Account created!' : "You're in!"}
+                    {isSignup ? 'Verify Your Email' : "You're in!"}
                   </motion.p>
-                  <motion.p
+                  <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.45 }}
-                    className="text-white/40 text-sm mt-2"
+                    className="text-white/45 text-sm mt-3 px-2 leading-relaxed font-medium"
                   >
-                    {isSignup ? 'Check your email to verify your account.' : 'Redirecting...'}
-                  </motion.p>
+                    {isSignup ? (
+                      <>
+                        We've sent a verification link to <span className="text-spotify-green font-bold break-all">{email}</span>.
+                        <span className="block mt-4 text-white/30 text-xs">Please check your inbox (and spam/junk folder) to complete your registration.</span>
+                      </>
+                    ) : 'Redirecting...'}
+                  </motion.div>
+
+                  {isSignup && (
+                    <motion.button
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.6 }}
+                      onClick={() => {
+                        setIsSuccess(false);
+                        setMode('login');
+                      }}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="mt-8 px-8 py-3 rounded-xl text-xs font-bold tracking-widest uppercase bg-white/10 hover:bg-white/15 text-white border border-white/10 transition-all shadow-[0_4px_12px_rgba(0,0,0,0.3)]"
+                    >
+                      Back to Login
+                    </motion.button>
+                  )}
                 </motion.div>
               ) : (
                 <motion.form
