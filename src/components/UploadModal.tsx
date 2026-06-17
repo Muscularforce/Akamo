@@ -454,7 +454,7 @@ export default function UploadModal({ isOpen, onClose, onUpload, onUpdate, userP
               <input
                 ref={audioInputRef}
                 type="file"
-                accept="audio/*,audio/mpeg,.mp3,.wav,audio/wav,audio/x-wav,video/mp4"
+                accept="audio/*,audio/mpeg,.mp3,.wav,audio/wav,audio/x-wav,audio/flac,.flac,video/mp4"
                 multiple
                 onChange={(e) => {
                   if (e.target.files && e.target.files.length > 0) {
@@ -484,7 +484,7 @@ export default function UploadModal({ isOpen, onClose, onUpload, onUpdate, userP
                   <div className="text-center">
                     <span className="block font-bold text-xl md:text-2xl tracking-tighter text-spotify-text">Synchronize Audio</span>
                     <span className="text-sm text-spotify-text-muted font-medium opacity-60">Drag assets here or select manually</span>
-                    <span className="block text-[10px] text-spotify-green font-bold uppercase tracking-widest mt-3 animate-pulse">WAV files are now supported</span>
+                    <span className="block text-[10px] text-spotify-green font-bold uppercase tracking-widest mt-3 animate-pulse">WAV & FLAC files are now supported</span>
                   </div>
                 </div>
               ) : (
