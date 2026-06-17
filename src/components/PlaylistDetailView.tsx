@@ -403,7 +403,7 @@ export default function PlaylistDetailView({
 
                 {/* Title + cover */}
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-lg overflow-hidden shrink-0 shadow-lg hidden sm:block">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-md sm:rounded-lg overflow-hidden shrink-0 shadow-lg">
                     <img src={track.coverUrl} alt={track.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                   </div>
                   <div className="truncate">

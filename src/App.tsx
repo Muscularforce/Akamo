@@ -68,6 +68,22 @@ export default function App() {
     );
   }, [tracks, searchQuery]);
 
+  const homeTracks = useMemo(() => {
+    const albumCountMap = new Map<string, number>();
+    const filtered = tracks.filter(track => {
+      if (!track.albumId) {
+        return true;
+      }
+      const count = albumCountMap.get(track.albumId) || 0;
+      if (count < 2) {
+        albumCountMap.set(track.albumId, count + 1);
+        return true;
+      }
+      return false;
+    });
+    return filtered.slice(0, 12);
+  }, [tracks]);
+
   // Keep userRef in sync so callbacks can read fresh user
   useEffect(() => {
     userRef.current = user;
@@ -593,7 +609,7 @@ export default function App() {
                     </div>
                     <div className="flex overflow-x-auto no-scrollbar gap-4 pb-4 -mx-4 px-4 md:mx-0 md:px-0 scroll-smooth">
                       {playlists.map((playlist) => (
-                        <div key={playlist.id} className="w-36 md:w-48 flex-shrink-0">
+                        <div key={playlist.id} className="w-28 sm:w-36 md:w-48 flex-shrink-0">
                           <PlaylistCard playlist={playlist} onClick={() => handlePlaylistClick(playlist)} />
                         </div>
                       ))}
@@ -609,7 +625,7 @@ export default function App() {
                     </div>
                     <div className="flex overflow-x-auto no-scrollbar gap-4 pb-4 -mx-4 px-4 md:mx-0 md:px-0 scroll-smooth">
                       {albums.map((album) => (
-                        <div key={album.id} className="w-36 md:w-48 flex-shrink-0">
+                        <div key={album.id} className="w-28 sm:w-36 md:w-48 flex-shrink-0">
                           <AlbumCard album={album} onClick={() => handleAlbumClick(album)} />
                         </div>
                       ))}
@@ -625,35 +641,55 @@ export default function App() {
                   {searchQuery ? 'Found Tracks' : 'Focus'}
                 </h2>
                 {!searchQuery && (
-                  <button onClick={triggerComingSoon} className="text-[10px] font-bold text-spotify-text-muted hover:text-spotify-text transition-colors uppercase tracking-widest">
+                  <button onClick={() => handleViewChange('explore')} className="text-[10px] font-bold text-spotify-text-muted hover:text-spotify-text transition-colors uppercase tracking-widest">
                     Show all
                   </button>
                 )}
               </div>
 
-              <div className="mobile-track-grid grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-8">
-                <AnimatePresence mode="popLayout">
-                  {filteredTracks.map((track) => (
-                    <TrackCard
-                      key={track.id}
-                      track={track}
-                      isActive={currentTrack?.id === track.id}
-                      onPlay={handlePlay}
-                      onDelete={handleDeleteTrack}
-                      onEdit={handleEditTrack}
-                      user={user}
-                      playlists={playlists}
-                      onAddToPlaylist={handleAddToPlaylist}
-                      onCreatePlaylistWithTrack={handleCreatePlaylistWithTrack}
-                    />
+              {searchQuery ? (
+                <div className="mobile-track-grid grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-8">
+                  <AnimatePresence mode="popLayout">
+                    {filteredTracks.map((track) => (
+                      <TrackCard
+                        key={track.id}
+                        track={track}
+                        isActive={currentTrack?.id === track.id}
+                        onPlay={handlePlay}
+                        onDelete={handleDeleteTrack}
+                        onEdit={handleEditTrack}
+                        user={user}
+                        playlists={playlists}
+                        onAddToPlaylist={handleAddToPlaylist}
+                        onCreatePlaylistWithTrack={handleCreatePlaylistWithTrack}
+                      />
+                    ))}
+                  </AnimatePresence>
+                  {filteredTracks.length === 0 && (
+                    <div className="col-span-full py-20 text-center">
+                      <p className="text-spotify-text-muted text-lg">No tracks found matching your search.</p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="flex overflow-x-auto no-scrollbar gap-4 pb-4 -mx-4 px-4 md:mx-0 md:px-0 scroll-smooth">
+                  {homeTracks.map((track) => (
+                    <div key={track.id} className="w-28 sm:w-36 md:w-48 flex-shrink-0">
+                      <TrackCard
+                        track={track}
+                        isActive={currentTrack?.id === track.id}
+                        onPlay={(t) => handlePlayFromContext(t, homeTracks, 'Focus', 'focus', 'playlist')}
+                        onDelete={handleDeleteTrack}
+                        onEdit={handleEditTrack}
+                        user={user}
+                        playlists={playlists}
+                        onAddToPlaylist={handleAddToPlaylist}
+                        onCreatePlaylistWithTrack={handleCreatePlaylistWithTrack}
+                      />
+                    </div>
                   ))}
-                </AnimatePresence>
-                {filteredTracks.length === 0 && (
-                  <div className="col-span-full py-20 text-center">
-                    <p className="text-spotify-text-muted text-lg">No tracks found matching your search.</p>
-                  </div>
-                )}
-              </div>
+                </div>
+              )}
             </section>
 
             {!searchQuery && <AboutSection />}

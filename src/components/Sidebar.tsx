@@ -103,24 +103,23 @@ export default function Sidebar({ activeView, onViewChange, onCreatePlaylist }: 
       </div>
 
       <div className="mt-auto p-6 rounded-3xl bg-gradient-to-br from-white/10 to-transparent border border-white/10 relative overflow-hidden group shrink-0">
-        <div className="absolute top-0 right-0 w-24 h-24 bg-spotify-green/20 blur-2xl rounded-full -translate-y-1/2 translate-x-1/2" />
-        <h4 className="text-sm font-bold mb-2 relative z-10">
-          <span className="font-display tracking-tight">Akamo</span>
-          <span
-            className="relative -top-1 ml-[1px] text-[0.65em] font-black"
-            style={{
-              background: 'var(--accent-gradient)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-              opacity: 0.85,
-            }}
-          >+</span>
+        <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/20 blur-2xl rounded-full -translate-y-1/2 translate-x-1/2" />
+        <h4 className="text-sm font-bold mb-2 relative z-10 flex items-center gap-2">
+          <span className="font-display tracking-tight text-white">Discord Server</span>
         </h4>
-        <p className="text-[10px] text-spotify-text-muted mb-4 leading-relaxed relative z-10">Unlock spatial audio and advanced equalizers for your journey.</p>
-        <button onClick={triggerComingSoon} className="w-full py-2.5 text-black text-[10px] font-bold rounded-xl hover:scale-105 active:scale-95 transition-all uppercase tracking-widest relative z-10" style={{ background: 'var(--accent-gradient)' }}>
-          Upgrade Now
-        </button>
+        <p className="text-[10px] text-spotify-text-muted mb-4 leading-relaxed relative z-10">Join our community server to chat, share music, and get updates.</p>
+        <a 
+          href="https://discord.gg/cqe3YAPAQ" 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          className="block w-full py-2.5 text-center text-white text-[10px] font-bold rounded-xl hover:scale-105 active:scale-95 transition-all uppercase tracking-widest relative z-10"
+          style={{ 
+            background: 'linear-gradient(135deg, #5865F2 0%, #4752C4 100%)',
+            boxShadow: '0 4px 15px rgba(88, 101, 242, 0.25)'
+          }}
+        >
+          Join Discord
+        </a>
       </div>
     </div>
   );

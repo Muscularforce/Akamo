@@ -305,7 +305,7 @@ export default function LibraryView({
                   onClick={() => onPlay(track)}
                   className="group flex items-center gap-3 md:gap-6 p-3 md:p-4 rounded-2xl hover:bg-white/5 transition-all cursor-pointer relative overflow-visible"
                 >
-                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg overflow-hidden shrink-0 shadow-lg">
+                    <div className="w-8 h-8 md:w-12 md:h-12 rounded-md md:rounded-lg overflow-hidden shrink-0 shadow-lg">
                         <img src={track.coverUrl} alt={track.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                     </div>
                     <div className="flex-1 min-w-0 grid grid-cols-2 md:grid-cols-3 items-center gap-2 md:gap-4">
