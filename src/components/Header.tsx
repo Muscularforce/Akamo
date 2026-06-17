@@ -1,6 +1,6 @@
 import { ChevronLeft, ChevronRight, Bell, User as UserIcon, LogOut, Upload, Settings, Moon, Heart, Search as SearchIcon, Send, Clock, Users } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { supabase, fetchNotifications, createNotification } from '../lib/supabase';
 import { User } from '@supabase/supabase-js';
 import { isOwner } from '../constants';
@@ -36,6 +36,27 @@ export default function Header({ onUploadClick, onLoginClick, currentTheme, onTh
   const [expandedNotifs, setExpandedNotifs] = useState<Set<string>>(new Set());
   const [newUpdateContent, setNewUpdateContent] = useState('');
   const [isSubmittingUpdate, setIsSubmittingUpdate] = useState(false);
+
+  // Read/unread notification tracking
+  const [lastSeenTime, setLastSeenTime] = useState<number>(() => {
+    const stored = localStorage.getItem('akamo_last_seen_notification_time');
+    return stored ? parseInt(stored, 10) : 0;
+  });
+
+  const unreadCount = useMemo(() => {
+    if (notifications.length === 0) return 0;
+    return notifications.filter(n => new Date(n.created_at).getTime() > lastSeenTime).length;
+  }, [notifications, lastSeenTime]);
+
+  const toggleNotifications = () => {
+    const nextState = !isNotificationsOpen;
+    setIsNotificationsOpen(nextState);
+    if (nextState && notifications.length > 0) {
+      const newestTime = new Date(notifications[0].created_at).getTime();
+      localStorage.setItem('akamo_last_seen_notification_time', newestTime.toString());
+      setLastSeenTime(newestTime);
+    }
+  };
 
   useEffect(() => {
     fetchNotifications().then(setNotifications);
@@ -145,10 +166,15 @@ export default function Header({ onUploadClick, onLoginClick, currentTheme, onTh
             {/* Bell */}
             <div className="relative" ref={notificationsRef}>
               <button 
-                onClick={() => setIsNotificationsOpen(!isNotificationsOpen)} 
-                className={`text-spotify-text-muted hover:text-spotify-text transition-all p-1.5 sm:p-2 rounded-full flex items-center justify-center ${isNotificationsOpen ? 'bg-white/10 text-spotify-text' : 'hover:bg-white/5'}`}
+                onClick={toggleNotifications} 
+                className={`relative text-spotify-text-muted hover:text-spotify-text transition-all p-1.5 sm:p-2 rounded-full flex items-center justify-center ${isNotificationsOpen ? 'bg-white/10 text-spotify-text' : 'hover:bg-white/5'}`}
               >
                 <Bell size={20} />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[8px] font-black w-4 h-4 rounded-full flex items-center justify-center ring-2 ring-[#030303] animate-pulse leading-none shadow-[0_2px_8px_rgba(239,68,68,0.4)]">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
               </button>
 
               <AnimatePresence>
