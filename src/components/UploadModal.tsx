@@ -126,7 +126,7 @@ export default function UploadModal({ isOpen, onClose, onUpload, onUpdate, userP
       audioFile: file,
       coverFile: null,
       title: file.name.replace(/\.[^/.]+$/, ""),
-      artist: userProfile?.display_name || '',
+      artist: '',
       coverPreview: null,
       validationErrors: {}
     }));
