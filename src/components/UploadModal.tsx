@@ -88,9 +88,7 @@ export default function UploadModal({ isOpen, onClose, onUpload, onUpdate, userP
   const [drafts, setDrafts] = useState<DraftTrack[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  const [customUploaderName, setCustomUploaderName] = useState(
-    userProfile?.role === 'owner' ? 'Jovan Fernandes' : (userProfile?.display_name || 'Anonymous')
-  );
+  const [customPublisherId, setCustomPublisherId] = useState<string>(userId);
   
   const [adminProfiles, setAdminProfiles] = useState<UserProfile[]>([]);
 
@@ -102,13 +100,8 @@ export default function UploadModal({ isOpen, onClose, onUpload, onUpdate, userP
     }
   }, [isOpen, userProfile]);
 
-  const handleUploaderNameChange = (newName: string) => {
-    const oldName = customUploaderName;
-    setCustomUploaderName(newName);
-    setDrafts(prev => prev.map(d => 
-      d.artist === oldName || d.artist === '' ? { ...d, artist: newName } : d
-    ));
-  };
+  // We no longer modify draft.artist when changing publisher.
+  // The publisher (ownerId) is entirely separate from the song's artist name.
   // If editing, skip the audio upload step
   const [step, setStep] = useState<'upload' | 'details'>(isEditing ? 'details' : 'upload');
 
@@ -125,16 +118,16 @@ export default function UploadModal({ isOpen, onClose, onUpload, onUpdate, userP
         coverPreview: editTrack.coverUrl,
         validationErrors: {}
       }]);
-      setCustomUploaderName(editTrack.artist);
+      if (editTrack.ownerId) setCustomPublisherId(editTrack.ownerId);
       setExpandedId(editTrack.id);
       setStep('details');
     } else {
       setDrafts([]);
-      setCustomUploaderName(userProfile?.role === 'owner' ? 'Jovan Fernandes' : (userProfile?.display_name || 'Anonymous'));
+      setCustomPublisherId(userId);
       setExpandedId(null);
       setStep('upload');
     }
-  }, [editTrack, isOpen, userProfile]);
+  }, [editTrack, isOpen, userProfile, userId]);
 
   // Clear field-level error when user fixes it
   const updateDraft = (id: string, updates: Partial<DraftTrack>) => {
@@ -364,10 +357,17 @@ export default function UploadModal({ isOpen, onClose, onUpload, onUpdate, userP
         setUploadPhase('saving');
         setUploadProgress(80);
 
+        // Determine ownerEmail for founder features based on selected publisher
+        const selectedProfile = adminProfiles.find(p => p.id === customPublisherId);
+        const isSelectedFounder = selectedProfile?.display_name === 'Jovan Fernandes';
+        const ownerEmailToSet = isSelectedFounder ? 'jovanf.fernandes@gmail.com' : 'user@akamo.app';
+
         await onUpdate({
           title: draft.title.trim(),
           artist: draft.artist.trim(),
           ...(draft.coverFile ? { coverUrl: newCoverUrl, coverPath: newCoverPath } : {}),
+          ownerId: customPublisherId,
+          ownerEmail: ownerEmailToSet,
         });
 
       } else {
@@ -457,6 +457,11 @@ export default function UploadModal({ isOpen, onClose, onUpload, onUpdate, userP
 
           const isVideo = draft.audioFile!.type.startsWith('video/');
           
+          // Determine ownerEmail for founder features based on selected publisher
+          const selectedProfile = adminProfiles.find(p => p.id === customPublisherId);
+          const isSelectedFounder = selectedProfile?.display_name === 'Jovan Fernandes';
+          const ownerEmailToSet = isSelectedFounder ? 'jovanf.fernandes@gmail.com' : 'user@akamo.app';
+
           finalTracks.push({
             title: draft.title.trim(),
             artist: draft.artist.trim(),
@@ -468,6 +473,8 @@ export default function UploadModal({ isOpen, onClose, onUpload, onUpdate, userP
             duration: 240, 
             type: isVideo ? 'video' : 'audio',
             uploadedAt: timestamp,
+            ownerId: customPublisherId,
+            ownerEmail: ownerEmailToSet,
           });
         }
 
@@ -651,20 +658,18 @@ export default function UploadModal({ isOpen, onClose, onUpload, onUpdate, userP
                         </div>
                         <div className="flex-1">
                           <select 
-                              value={customUploaderName || 'Jovan Fernandes'}
-                              onChange={(e) => handleUploaderNameChange(e.target.value)}
+                              value={customPublisherId}
+                              onChange={(e) => setCustomPublisherId(e.target.value)}
                               className="bg-transparent text-sm text-spotify-text font-medium w-full focus:outline-none appearance-none cursor-pointer"
                             >
-                              <option value="Jovan Fernandes" className="bg-spotify-black text-white">Jovan Fernandes</option>
-                              <option value="Akamo (Admin)" className="bg-spotify-black text-white">Akamo (Admin)</option>
+                              <option value={userId} className="bg-spotify-black text-white">Publish as Myself</option>
                               {adminProfiles
-                                .filter(p => p.display_name !== 'Jovan Fernandes' && p.display_name !== 'Akamo (Admin)')
+                                .filter(p => p.id !== userId)
                                 .map(p => (
-                                  <option key={p.id} value={p.display_name} className="bg-spotify-black text-white">
+                                  <option key={p.id} value={p.id} className="bg-spotify-black text-white">
                                     {p.display_name}
                                   </option>
                               ))}
-                              <option value="Anonymous" className="bg-spotify-black text-white">Anonymous</option>
                             </select>
                             <div className="pointer-events-none absolute inset-y-0 right-16 flex items-center px-2 text-spotify-text-muted">
                               <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>

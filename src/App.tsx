@@ -350,8 +350,8 @@ export default function App() {
       const tracksToInsert = Array.isArray(newTrack) ? newTrack : [newTrack];
       const tracksWithMeta = tracksToInsert.map(t => ({
         ...t,
-        ownerId: user.id,
-        ownerEmail: user.email,
+        ownerId: t.ownerId || user.id,
+        ownerEmail: t.ownerEmail !== undefined ? t.ownerEmail : user.email,
         uploadedAt: Date.now(),
       }));
 
