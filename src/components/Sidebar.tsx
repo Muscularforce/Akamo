@@ -10,12 +10,12 @@ interface SidebarProps {
   onCreatePlaylist?: () => void;
 }
 
-const navItems: { icon: any; label: string; view: View; isNew?: boolean }[] = [
+const navItems: { icon: any; label: string; view: View }[] = [
   { icon: Home, label: 'Home', view: 'home' },
   { icon: Search, label: 'Explore', view: 'explore' },
   { icon: Library, label: 'Library', view: 'library' },
-  { icon: Disc3, label: 'Albums', view: 'albums', isNew: true },
-  { icon: ListMusic, label: 'Playlists', view: 'playlists', isNew: true },
+  { icon: Disc3, label: 'Albums', view: 'albums' },
+  { icon: ListMusic, label: 'Playlists', view: 'playlists' },
 ];
 
 export default function Sidebar({ activeView, onViewChange, onCreatePlaylist }: SidebarProps) {
@@ -72,15 +72,6 @@ export default function Sidebar({ activeView, onViewChange, onCreatePlaylist }: 
               >
                 <item.icon size={22} strokeWidth={isActive ? 2.5 : 2} />
                 <span className={`text-sm tracking-wide ${isActive ? 'font-bold' : 'font-medium'}`}>{item.label}</span>
-                {item.isNew && (
-                  <span className="ml-2 flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30 text-[8px] font-black uppercase tracking-widest leading-none shadow-[0_0_10px_rgba(239,68,68,0.2)]">
-                    <span
-                      className="w-1 h-1 rounded-full bg-red-500 flex-shrink-0"
-                      style={{ boxShadow: '0 0 5px rgba(239,68,68,1)', animation: 'red-badge-breathe 2s ease-in-out infinite' }}
-                    />
-                    New
-                  </span>
-                )}
                 {isActive && <motion.div layoutId="active-pill" className="ml-auto w-1.5 h-1.5 rounded-full bg-spotify-green accent-glow" />}
               </motion.div>
             );
