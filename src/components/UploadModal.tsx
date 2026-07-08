@@ -647,9 +647,8 @@ export default function UploadModal({ isOpen, onClose, onUpload, onUpdate, userP
                             <UserIcon size={14} className="text-spotify-green" />
                           )}
                         </div>
-                        {userProfile?.role === 'owner' ? (
-                          <div className="flex-1">
-                            <select 
+                        <div className="flex-1">
+                          <select 
                               value={customUploaderName || 'Jovan Fernandes'}
                               onChange={(e) => handleUploaderNameChange(e.target.value)}
                               className="bg-transparent text-sm text-spotify-text font-medium w-full focus:outline-none appearance-none cursor-pointer"

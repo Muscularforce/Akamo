@@ -374,6 +374,44 @@ export async function fetchPlaylists(userId: string): Promise<PlaylistMeta[]> {
   return (data || []) as PlaylistMeta[];
 }
 
+export interface PlaylistWithCovers extends PlaylistMeta {
+  trackCount: number;
+  trackCovers: string[];
+}
+
+/** Fetch all public playlists with their track covers and count */
+export async function fetchPublicPlaylists(): Promise<PlaylistWithCovers[]> {
+  const { data, error } = await supabase
+    .from('playlists')
+    .select('*, playlist_tracks( track:tracks(coverUrl) )')
+    .eq('isPublic', true)
+    .order('updatedAt', { ascending: false });
+
+  if (error) {
+    console.error('[Akamo] fetchPublicPlaylists failed:', error);
+    return [];
+  }
+
+  return (data || []).map((row: any) => {
+    // Extract cover URLs from the nested relation, ignoring nulls
+    const covers = row.playlist_tracks
+      .map((pt: any) => pt.track?.coverUrl)
+      .filter(Boolean);
+    
+    return {
+      id: row.id,
+      title: row.title,
+      description: row.description,
+      ownerId: row.ownerId,
+      isPublic: row.isPublic,
+      coverUrl: row.coverUrl,
+      createdAt: row.createdAt,
+      trackCount: row.playlist_tracks.length,
+      trackCovers: covers.slice(0, 4), // first 4 for collage
+    };
+  });
+}
+
 /** Fetch a single playlist by ID */
 export async function fetchPlaylist(playlistId: string): Promise<PlaylistMeta | null> {
   const { data, error } = await supabase

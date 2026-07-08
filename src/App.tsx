@@ -26,7 +26,24 @@ import CreateAlbumModal from './components/CreateAlbumModal';
 import AlbumCard from './components/AlbumCard';
 import PlaylistCard from './components/PlaylistCard';
 import { Track, View, UserProfile, Album, PlaylistMeta, PlaybackContext } from './types';
-import { supabase, fetchProfile, fetchAlbums, fetchPlaylists, createPlaylist, addTrackToPlaylist, createAlbum, addTrackToAlbum, deleteAlbum, removeTrackFromAlbum, updateAlbum, syncAlbumTracks } from './lib/supabase';
+import { 
+  supabase, 
+  deleteTrack,
+  updateTrack,
+  fetchProfile, 
+  fetchAlbums, 
+  fetchPlaylists, 
+  fetchPublicPlaylists,
+  PlaylistWithCovers,
+  createPlaylist, 
+  addTrackToPlaylist, 
+  createAlbum, 
+  addTrackToAlbum, 
+  deleteAlbum, 
+  removeTrackFromAlbum, 
+  updateAlbum, 
+  syncAlbumTracks 
+} from './lib/supabase';
 import { User } from '@supabase/supabase-js';
 import { isFounder, isOwner } from './constants';
 import { ComingSoonProvider } from './components/ComingSoonToast';
@@ -49,6 +66,7 @@ export default function App() {
   // ─── Albums & Playlists State ────────────────────────
   const [albums, setAlbums] = useState<Album[]>([]);
   const [playlists, setPlaylists] = useState<PlaylistMeta[]>([]);
+  const [publicPlaylists, setPublicPlaylists] = useState<PlaylistWithCovers[]>([]);
   const [selectedAlbum, setSelectedAlbum] = useState<Album | null>(null);
   const [selectedPlaylist, setSelectedPlaylist] = useState<PlaylistMeta | null>(null);
   const [isCreatePlaylistOpen, setIsCreatePlaylistOpen] = useState(false);
@@ -150,7 +168,13 @@ export default function App() {
       }
     };
 
+    const initPublicPlaylists = async () => {
+      const p = await fetchPublicPlaylists();
+      setPublicPlaylists(p);
+    };
+
     fetchTracks();
+    initPublicPlaylists();
 
     // Fetch albums
     fetchAlbums().then(setAlbums);
@@ -619,22 +643,6 @@ export default function App() {
 
             {!searchQuery && (
               <>
-                {/* Playlists Section */}
-                {playlists.length > 0 && (
-                  <section className="mb-8 md:mb-12">
-                    <div className="flex items-center justify-between mb-4">
-                      <h2 className="text-xl md:text-2xl font-bold tracking-tight text-spotify-text">Your Playlists</h2>
-                    </div>
-                    <div className="flex overflow-x-auto no-scrollbar gap-4 pb-4 -mx-4 px-4 md:mx-0 md:px-0 scroll-smooth">
-                      {playlists.map((playlist) => (
-                        <div key={playlist.id} className="w-28 sm:w-36 md:w-48 flex-shrink-0">
-                          <PlaylistCard playlist={playlist} onClick={() => handlePlaylistClick(playlist)} />
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-                )}
-
                 {/* Albums Section */}
                 {albums.length > 0 && (
                   <section className="mb-8 md:mb-12">
@@ -709,6 +717,27 @@ export default function App() {
                 </div>
               )}
             </section>
+
+            {/* Public Playlists Section (Below Focus) */}
+            {!searchQuery && publicPlaylists.length > 0 && (
+              <section className="mb-12">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl md:text-2xl font-bold tracking-tight text-spotify-text">Playlists</h2>
+                </div>
+                <div className="flex overflow-x-auto no-scrollbar gap-4 pb-4 -mx-4 px-4 md:mx-0 md:px-0 scroll-smooth">
+                  {publicPlaylists.map((playlist) => (
+                    <div key={playlist.id} className="w-28 sm:w-36 md:w-48 flex-shrink-0">
+                      <PlaylistCard 
+                        playlist={playlist} 
+                        onClick={() => handlePlaylistClick(playlist)}
+                        trackCovers={playlist.trackCovers}
+                        trackCount={playlist.trackCount}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
 
             {!searchQuery && <AboutSection />}
           </motion.div>
