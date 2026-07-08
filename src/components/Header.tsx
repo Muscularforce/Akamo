@@ -400,15 +400,6 @@ export default function Header({ onUploadClick, onLoginClick, currentTheme, onTh
             {/* Profile dropdown — red ring on avatar */}
             <div className="relative" ref={profileRef}>
               {/* Permanent Pulsing red ring around avatar */}
-              <motion.span
-                initial={{ opacity: 0, scale: 0.7 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="absolute inset-[-4px] rounded-full pointer-events-none z-10"
-                style={{
-                  border: '2px solid rgba(239,68,68,0.9)',
-                  boxShadow: '0 0 10px rgba(239,68,68,0.8), 0 0 24px rgba(239,68,68,0.4)',
-                  animation: 'red-badge-breathe 2s ease-in-out infinite',
-                }}
               {!hasSeenRequestTooltip && (
                 <motion.span
                   initial={{ opacity: 0, scale: 0.7 }}
