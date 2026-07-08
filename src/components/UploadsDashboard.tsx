@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Track, UserProfile } from '../types';
-import { fetchUserTracks, createSongRequest } from '../lib/supabase';
-import { ArrowLeft, Loader2, Music, Edit, Plus, X, Send } from 'lucide-react';
+import { fetchUserTracks, createSongRequest, supabase } from '../lib/supabase';
+import { ArrowLeft, Loader2, Music, Edit, Plus, X, Send, RefreshCw } from 'lucide-react';
 
 interface UploadsDashboardProps {
   userProfile: UserProfile;
