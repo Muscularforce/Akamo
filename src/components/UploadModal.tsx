@@ -88,8 +88,17 @@ export default function UploadModal({ isOpen, onClose, onUpload, onUpdate, userP
   const [drafts, setDrafts] = useState<DraftTrack[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  const [customUploaderName, setCustomUploaderName] = useState('');
+  const [customUploaderName, setCustomUploaderName] = useState(
+    userProfile?.role === 'owner' ? 'Jovan Fernandes' : (userProfile?.display_name || 'Anonymous')
+  );
 
+  const handleUploaderNameChange = (newName: string) => {
+    const oldName = customUploaderName;
+    setCustomUploaderName(newName);
+    setDrafts(prev => prev.map(d => 
+      d.artist === oldName || d.artist === '' ? { ...d, artist: newName } : d
+    ));
+  };
   // If editing, skip the audio upload step
   const [step, setStep] = useState<'upload' | 'details'>(isEditing ? 'details' : 'upload');
 
@@ -615,7 +624,46 @@ export default function UploadModal({ isOpen, onClose, onUpload, onUpdate, userP
                 </div>
               ) : (
                 <div className="flex-1 flex flex-col gap-6 overflow-y-auto pr-2 no-scrollbar">
+{/* Auto-Fill All Tracks */}
                   
+                  {!isEditing && (
+                    <div className="mb-6">
+                      <label className="block text-[10px] font-bold text-spotify-text-muted uppercase tracking-widest mb-2 ml-4">Publishing As</label>
+                      <div className="w-full h-14 bg-white/[0.03] rounded-2xl px-6 flex items-center gap-3 border border-white/5 relative">
+                        <div className="w-8 h-8 rounded-full bg-spotify-green/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                          {userProfile?.avatar_url ? (
+                            <img src={userProfile.avatar_url} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <UserIcon size={14} className="text-spotify-green" />
+                          )}
+                        </div>
+                        {userProfile?.role === 'owner' ? (
+                          <div className="flex-1">
+                            <select 
+                              value={customUploaderName || 'Jovan Fernandes'}
+                              onChange={(e) => handleUploaderNameChange(e.target.value)}
+                              className="bg-transparent text-sm text-spotify-text font-medium w-full focus:outline-none appearance-none cursor-pointer"
+                            >
+                              <option value="Jovan Fernandes" className="bg-spotify-black text-white">Jovan Fernandes</option>
+                              <option value="Akamo (Admin)" className="bg-spotify-black text-white">Akamo (Admin)</option>
+                              <option value="Anonymous" className="bg-spotify-black text-white">Anonymous</option>
+                            </select>
+                            <div className="pointer-events-none absolute inset-y-0 right-16 flex items-center px-2 text-spotify-text-muted">
+                              <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-sm text-spotify-text font-medium truncate flex-1">
+                            {customUploaderName || 'Jovan Fernandes'}
+                          </span>
+                        )}
+                        <span className="ml-auto text-[9px] text-spotify-text-muted uppercase tracking-widest font-bold opacity-40 shrink-0">
+                          {userProfile?.role === 'owner' ? 'Admin' : 'Read Only'}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
                   {drafts.length > 1 && (
                     <div className="bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col gap-3">
                       <div className="flex items-center justify-between">
@@ -838,44 +886,7 @@ export default function UploadModal({ isOpen, onClose, onUpload, onUpdate, userP
                                       )}
                                     </div>
 
-                                    {!isEditing && (
-                                      <div>
-                                        <label className="block text-[10px] font-bold text-spotify-text-muted uppercase tracking-widest mb-2 ml-4">Publishing As</label>
-                                        <div className="w-full h-14 bg-white/[0.03] rounded-2xl px-6 flex items-center gap-3 border border-white/5 relative">
-                                          <div className="w-8 h-8 rounded-full bg-spotify-green/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                                            {userProfile?.avatar_url ? (
-                                              <img src={userProfile.avatar_url} alt="" className="w-full h-full object-cover" />
-                                            ) : (
-                                              <UserIcon size={14} className="text-spotify-green" />
-                                            )}
-                                          </div>
-                                          {userProfile?.role === 'owner' ? (
-                                            <div className="flex-1">
-                                              <select 
-                                                value={customUploaderName}
-                                                onChange={(e) => setCustomUploaderName(e.target.value)}
-                                                className="bg-transparent text-sm text-spotify-text font-medium w-full focus:outline-none appearance-none cursor-pointer"
-                                              >
-                                                <option value="Akamo (Admin)" className="bg-spotify-black text-white">Akamo (Admin)</option>
-                                                <option value="Jovan Fernandes" className="bg-spotify-black text-white">Jovan Fernandes</option>
-                                                <option value="Anonymous" className="bg-spotify-black text-white">Anonymous</option>
-                                              </select>
-                                              <div className="pointer-events-none absolute inset-y-0 right-16 flex items-center px-2 text-spotify-text-muted">
-                                                <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
-                                              </div>
-                                            </div>
-                                          ) : (
-                                            <span className="text-sm text-spotify-text font-medium truncate flex-1">
-                                              {customUploaderName}
-                                            </span>
-                                          )}
-                                          <span className="ml-auto text-[9px] text-spotify-text-muted uppercase tracking-widest font-bold opacity-40 shrink-0">
-                                            {userProfile?.role === 'owner' ? 'Admin' : 'Read Only'}
-                                          </span>
-                                        </div>
-                                      </div>
-                                    )}
-                                  </div>
+                                    </div>
                                 </div>
                               </motion.div>
                             )}
