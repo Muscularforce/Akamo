@@ -1,8 +1,8 @@
 import { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Mail, Lock, Eye, EyeOff, ArrowLeft, Check, Loader2, Music2, AlertTriangle, UserIcon } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, ArrowLeft, Check, Loader2, Music2, AlertTriangle, UserIcon, AtSign } from 'lucide-react';
 import AnimatedInput from './AnimatedInput';
-import { supabase, isSupabaseMisconfigured } from '../lib/supabase';
+import { supabase, isSupabaseMisconfigured, checkUsernameAvailability } from '../lib/supabase';
 
 type AuthMode = 'login' | 'signup';
 
@@ -93,6 +93,7 @@ export default function AuthPage({ onBack, onSuccess }: AuthPageProps) {
   const [password, setPassword] = useState('');
   const [confirmPw, setConfirmPw] = useState('');
   const [displayName, setDisplayName] = useState('');
+  const [username, setUsername] = useState('');
   const [showPw, setShowPw] = useState(false);
   const [showConfirmPw, setShowConfirmPw] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -111,6 +112,7 @@ export default function AuthPage({ onBack, onSuccess }: AuthPageProps) {
     setTouched({});
     setConfirmPw('');
     setDisplayName('');
+    setUsername('');
     setShowPw(false);
     setShowConfirmPw(false);
   }, [mode]);
@@ -119,6 +121,11 @@ export default function AuthPage({ onBack, onSuccess }: AuthPageProps) {
     const errs: Record<string, string> = {};
     if (isSignup && !displayName.trim()) errs.displayName = 'Display name is required';
     if (isSignup && displayName.trim().length > 0 && displayName.trim().length < 2) errs.displayName = 'Must be at least 2 characters';
+    if (isSignup) {
+      if (!username.trim()) errs.username = 'Username is required';
+      else if (username.trim().length < 3) errs.username = 'Must be at least 3 characters';
+      else if (!/^[a-zA-Z0-9_]+$/.test(username)) errs.username = 'Only letters, numbers, and underscores';
+    }
     const emailErr = validateEmail(email);
     const pwErr = validatePassword(password, isSignup);
     if (emailErr) errs.email = emailErr;
@@ -137,6 +144,18 @@ export default function AuthPage({ onBack, onSuccess }: AuthPageProps) {
     if (!validate()) {
       setShakeKey((k) => k + 1);
       return;
+    }
+
+    if (isSignup) {
+      setIsLoading(true);
+      const isAvailable = await checkUsernameAvailability(username.trim().toLowerCase());
+      if (!isAvailable) {
+        setErrors((e) => ({ ...e, username: 'Username is already taken' }));
+        setShakeKey((k) => k + 1);
+        setIsLoading(false);
+        return;
+      }
+      setIsLoading(false);
     }
 
     if (isSupabaseMisconfigured) {
@@ -158,7 +177,7 @@ export default function AuthPage({ onBack, onSuccess }: AuthPageProps) {
           email,
           password,
           options: {
-            data: { full_name: displayName.trim() },
+            data: { full_name: displayName.trim(), username: username.trim().toLowerCase() },
             emailRedirectTo: `${window.location.origin}/`
           }
         });
@@ -409,6 +428,28 @@ export default function AuthPage({ onBack, onSuccess }: AuthPageProps) {
                           error={touched.displayName ? errors.displayName : undefined}
                           icon={<UserIcon size={18} />}
                           autoComplete="name"
+                          disabled={isLoading}
+                        />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                  
+                  <AnimatePresence>
+                    {isSignup && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0, y: 12 }}
+                        animate={{ opacity: 1, height: 'auto', y: 0 }}
+                        exit={{ opacity: 0, height: 0, y: -12 }}
+                        transition={{ duration: 0.35, ease: cardEase }}
+                      >
+                        <AnimatedInput
+                          label="Username"
+                          type="text"
+                          value={username}
+                          onChange={(v) => { setUsername(v); if (touched.username) { setErrors((e) => ({ ...e, username: !v.trim() ? 'Username is required' : v.trim().length < 3 ? 'Must be at least 3 characters' : !/^[a-zA-Z0-9_]+$/.test(v) ? 'Only letters, numbers, and underscores' : '' })); } }}
+                          error={touched.username ? errors.username : undefined}
+                          icon={<AtSign size={18} />}
+                          autoComplete="username"
                           disabled={isLoading}
                         />
                       </motion.div>

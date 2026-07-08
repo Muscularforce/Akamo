@@ -76,7 +76,7 @@ export function ComingSoonProvider({ children }: { children: React.ReactNode }) 
             <div
               className="px-8 py-4 rounded-2xl border border-white/15 shadow-[0_20px_80px_rgba(0,0,0,0.8)] flex items-center gap-4"
               style={{
-                background: 'linear-gradient(135deg, rgba(255, 40, 40, 0.15) 0%, rgba(30, 30, 30, 0.95) 40%, rgba(30, 30, 30, 0.95) 100%)',
+                background: 'linear-gradient(135deg, rgba(255, 40, 40, 0.25) 0%, rgba(15, 15, 15, 1) 30%, rgba(15, 15, 15, 1) 100%)',
                 backdropFilter: 'blur(40px)',
               }}
             >

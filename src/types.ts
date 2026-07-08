@@ -1,9 +1,10 @@
 export type View = 'home' | 'explore' | 'library' | 'favorites' | 'auth' | 'verified' | 'account'
-  | 'albums' | 'album-detail' | 'playlists' | 'playlist-detail' | 'social';
+  | 'albums' | 'album-detail' | 'playlists' | 'playlist-detail' | 'social' | 'uploads' | 'admin-requests';
 
 export interface UserProfile {
   id: string;
   display_name: string;
+  username?: string;
   avatar_url: string | null;
   role: 'user' | 'owner';
   created_at?: string;
@@ -103,4 +104,12 @@ export interface Notification {
   created_at: string;
   content: string;
   author_id: string;
+}
+
+export interface SongRequest {
+  id: string;
+  title: string;
+  user_name?: string;
+  status: 'pending' | 'approved' | 'rejected';
+  created_at: string;
 }

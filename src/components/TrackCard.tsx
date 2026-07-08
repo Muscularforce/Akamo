@@ -62,6 +62,13 @@ export default function TrackCard({ track, isActive, onPlay, onDelete, onEdit, u
       window.removeEventListener('resize', () => { setMenuOpen(false); setShowPlaylists(false); });
     };
   }, [menuOpen, updateMenuPos]);
+  let displayCoverUrl = track.coverUrl;
+  if (displayCoverUrl?.includes('drive.google.com/thumbnail') || displayCoverUrl?.includes('drive.google.com/uc')) {
+    const match = displayCoverUrl.match(/id=([^&]+)/);
+    if (match && match[1]) {
+      displayCoverUrl = `https://lh3.googleusercontent.com/d/${match[1]}=w1000`;
+    }
+  }
 
   return (
     <motion.div
@@ -78,7 +85,7 @@ export default function TrackCard({ track, isActive, onPlay, onDelete, onEdit, u
       <div className={`flex flex-col h-full overflow-hidden ${isCreator ? 'bg-[#121212] rounded-[1.8rem] hover:bg-[#181818] transition-colors' : 'rounded-[2rem]'}`}>
         <div className="relative aspect-square overflow-hidden bg-black/20">
           <img
-            src={track.coverUrl}
+            src={displayCoverUrl}
             alt={track.title}
             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
           />

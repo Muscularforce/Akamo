@@ -2,7 +2,7 @@ import React, { useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Camera, Check, Loader2, ArrowLeft, User as UserIcon, Shield } from 'lucide-react';
 import { UserProfile } from '../types';
-import { uploadAvatar, upsertProfile } from '../lib/supabase';
+import { uploadAvatar, upsertProfile, checkUsernameAvailability } from '../lib/supabase';
 import { isOwner } from '../constants';
 import AuroraBadge from './AuroraBadge';
 import { User } from '@supabase/supabase-js';
@@ -12,6 +12,7 @@ interface AccountSettingsProps {
   userProfile: UserProfile;
   onProfileUpdate: (profile: UserProfile) => void;
   onBack: () => void;
+  onAdminRequests?: () => void;
 }
 
 function getInitials(name: string): string {
@@ -24,8 +25,9 @@ function getInitials(name: string): string {
     .toUpperCase() || '?';
 }
 
-export default function AccountSettings({ user, userProfile, onProfileUpdate, onBack }: AccountSettingsProps) {
+export default function AccountSettings({ user, userProfile, onProfileUpdate, onBack, onAdminRequests }: AccountSettingsProps) {
   const [displayName, setDisplayName] = useState(userProfile.display_name || '');
+  const [username, setUsername] = useState(userProfile.username || '');
   const [avatarPreview, setAvatarPreview] = useState<string | null>(userProfile.avatar_url);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -91,13 +93,29 @@ export default function AccountSettings({ user, userProfile, onProfileUpdate, on
       setError('Display name must be at least 2 characters.');
       return;
     }
+    if (!username.trim()) {
+      setError('Username cannot be empty.');
+      return;
+    }
+    if (username.trim().length < 3 || !/^[a-zA-Z0-9_]+$/.test(username.trim())) {
+      setError('Username must be at least 3 characters and contain only letters, numbers, and underscores.');
+      return;
+    }
 
     setIsSaving(true);
     setError('');
 
     try {
+      if (username.trim().toLowerCase() !== (userProfile.username || '').toLowerCase()) {
+        const isAvailable = await checkUsernameAvailability(username.trim().toLowerCase());
+        if (!isAvailable) {
+          throw new Error('Username is already taken.');
+        }
+      }
+
       const updated = await upsertProfile(user.id, {
         display_name: displayName.trim(),
+        username: username.trim().toLowerCase(),
         avatar_url: avatarPreview, // Use current preview which was already auto-uploaded if changed
       });
 
@@ -113,7 +131,7 @@ export default function AccountSettings({ user, userProfile, onProfileUpdate, on
     }
   };
 
-  const hasChanges = displayName.trim() !== userProfile.display_name || pendingFile.current !== null;
+  const hasChanges = displayName.trim() !== (userProfile.display_name || '') || username.trim() !== (userProfile.username || '') || pendingFile.current !== null;
 
   return (
     <motion.div
@@ -133,8 +151,22 @@ export default function AccountSettings({ user, userProfile, onProfileUpdate, on
         <span className="tracking-wide">Back</span>
       </motion.button>
 
-      <h1 className="text-4xl font-black tracking-tight text-spotify-text mb-2">Account Settings</h1>
-      <p className="text-spotify-text-muted text-sm font-medium opacity-60 mb-10">Manage your identity on Akamo.</p>
+      <div className="flex items-center justify-between mb-10">
+        <div>
+          <h1 className="text-4xl font-black tracking-tight text-spotify-text mb-2">Account Settings</h1>
+          <p className="text-spotify-text-muted text-sm font-medium opacity-60">Manage your identity on Akamo.</p>
+        </div>
+        {owner && onAdminRequests && (
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={onAdminRequests}
+            className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-full text-xs font-bold uppercase tracking-widest transition-colors"
+          >
+            Admin Requests
+          </motion.button>
+        )}
+      </div>
 
       {/* ─── Avatar Section ─── */}
       <div className="liquid-glass rounded-[2.5rem] p-8 mb-6 border border-white/5">
@@ -153,7 +185,10 @@ export default function AccountSettings({ user, userProfile, onProfileUpdate, on
           >
             <div className={`w-full h-full rounded-full overflow-hidden flex items-center justify-center ${owner ? 'bg-[#121212]' : 'bg-white/5'}`}>
               {avatarPreview ? (
-                <img src={avatarPreview} alt="Avatar" className="w-full h-full object-cover rounded-full" />
+                <div className="relative w-full h-full" onContextMenu={(e) => e.preventDefault()}>
+                  <img src={avatarPreview} alt="Avatar" className="w-full h-full object-cover rounded-full pointer-events-none" />
+                  <div className="absolute inset-0 z-10" />
+                </div>
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-spotify-green/30 to-purple-500/30">
                   <span className="text-2xl font-black text-white/80">
@@ -203,6 +238,20 @@ export default function AccountSettings({ user, userProfile, onProfileUpdate, on
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               placeholder="Your display name"
+              className="w-full h-14 bg-white/5 rounded-2xl px-6 text-spotify-text focus:outline-none focus:ring-2 focus:ring-spotify-green/20 border border-white/5 transition-all"
+            />
+          </div>
+
+          {/* Username */}
+          <div>
+            <label className="block text-[10px] font-bold text-spotify-text-muted uppercase tracking-widest mb-2 ml-4">
+              Username
+            </label>
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Your username"
               className="w-full h-14 bg-white/5 rounded-2xl px-6 text-spotify-text focus:outline-none focus:ring-2 focus:ring-spotify-green/20 border border-white/5 transition-all"
             />
           </div>

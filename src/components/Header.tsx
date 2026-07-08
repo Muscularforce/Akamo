@@ -43,6 +43,8 @@ export default function Header({ onUploadClick, onLoginClick, currentTheme, onTh
     return stored ? parseInt(stored, 10) : 0;
   });
 
+  // ─── Permanent Callout Highlights ──────────────────────────────────────────
+
   const unreadCount = useMemo(() => {
     if (notifications.length === 0) return 0;
     return notifications.filter(n => new Date(n.created_at).getTime() > lastSeenTime).length;
@@ -151,17 +153,59 @@ export default function Header({ onUploadClick, onLoginClick, currentTheme, onTh
                 <span className="gpu-accelerated relative z-10 text-shadow-sm hidden sm:inline">Social</span>
             </motion.button>
 
-            {/* Upload button — uses theme variable for Pink Flamingo support */}
-            <motion.button
-                whileHover={{ scale: 1.05, y: -2 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={onUploadClick}
-                className="accent-shimmer flex items-center gap-1.5 md:gap-2 text-black px-2.5 sm:px-3 md:px-5 py-2 rounded-full text-[11px] font-bold transition-all"
-                style={{ background: 'var(--accent-gradient)', boxShadow: 'var(--accent-glow)' }}
-            >
-                <Upload size={14} />
-                <span className="uppercase tracking-widest hidden sm:inline">Upload</span>
-            </motion.button>
+            {/* Upload button — red ring + floating text sign */}
+            <div className="relative">
+              <motion.button
+                  whileHover={{ scale: 1.05, y: -2 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => { onUploadClick(); }}
+                  className="accent-shimmer flex items-center gap-1.5 md:gap-2 text-black px-2.5 sm:px-3 md:px-5 py-2 rounded-full text-[11px] font-bold transition-all"
+                  style={{
+                    background: 'var(--accent-gradient)',
+                    boxShadow: '0 0 0 2.5px rgba(239,68,68,0.9), 0 0 16px rgba(239,68,68,0.7), 0 0 32px rgba(239,68,68,0.35)',
+                    transition: 'box-shadow 0.4s ease',
+                  }}
+              >
+                  <Upload size={14} />
+                  <span className="uppercase tracking-widest hidden sm:inline">Upload</span>
+              </motion.button>
+
+              {/* Floating text sign below the upload button */}
+              <motion.div
+                initial={{ opacity: 0, y: -6, scale: 0.9 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                className="absolute top-full right-0 sm:left-1/2 sm:-translate-x-1/2 sm:right-auto mt-2.5 pointer-events-none z-50"
+              >
+                {/* Caret arrow */}
+                <div
+                  className="w-2 h-2 rotate-45 absolute -top-1 right-6 sm:left-1/2 sm:-translate-x-1/2 sm:right-auto"
+                  style={{
+                    background: 'rgba(239,68,68,0.25)',
+                    border: '1px solid rgba(239,68,68,0.4)',
+                    borderBottom: 'none',
+                    borderRight: 'none',
+                  }}
+                />
+                <div
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl whitespace-nowrap"
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(20,5,5,0.92) 0%, rgba(30,8,8,0.88) 100%)',
+                    border: '1px solid rgba(239,68,68,0.45)',
+                    backdropFilter: 'blur(16px)',
+                    WebkitBackdropFilter: 'blur(16px)',
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.5), 0 0 12px rgba(239,68,68,0.25)',
+                  }}
+                >
+                  <span
+                    className="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0"
+                    style={{ boxShadow: '0 0 5px rgba(239,68,68,1)', animation: 'red-badge-breathe 2s ease-in-out infinite' }}
+                  />
+                  <span className="text-[9px] font-black uppercase tracking-widest text-red-300 leading-none">
+                    New: Autofill Feature
+                  </span>
+                </div>
+              </motion.div>
+            </div>
 
             {/* Bell */}
             <div className="relative" ref={notificationsRef}>
@@ -334,26 +378,74 @@ export default function Header({ onUploadClick, onLoginClick, currentTheme, onTh
               </AnimatePresence>
             </div>
 
-            {/* Profile dropdown */}
+            {/* Profile dropdown — red ring on avatar */}
             <div className="relative" ref={profileRef}>
+              {/* Permanent Pulsing red ring around avatar */}
+              <motion.span
+                initial={{ opacity: 0, scale: 0.7 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="absolute inset-[-4px] rounded-full pointer-events-none z-10"
+                style={{
+                  border: '2px solid rgba(239,68,68,0.9)',
+                  boxShadow: '0 0 10px rgba(239,68,68,0.8), 0 0 24px rgba(239,68,68,0.4)',
+                  animation: 'red-badge-breathe 2s ease-in-out infinite',
+                }}
+              />
               <button 
-                onClick={() => setIsProfileOpen(!isProfileOpen)}
+                onClick={() => { setIsProfileOpen(!isProfileOpen); }}
                 className={`w-9 h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center overflow-hidden hover:scale-105 transition-transform p-0.5 ${
                   isCreator ? 'aurora-gradient' : 'liquid-glass'
                 }`}
               >
-                <div className="w-full h-full rounded-full overflow-hidden bg-black">
+                <div className="relative w-full h-full rounded-full overflow-hidden bg-black" onContextMenu={(e) => e.preventDefault()}>
                   {userProfile?.avatar_url ? (
-                    <img src={userProfile.avatar_url} alt={userProfile.display_name || 'User'} className="w-full h-full rounded-full object-cover" />
+                    <img src={userProfile.avatar_url} alt={userProfile.display_name || 'User'} className="w-full h-full rounded-full object-cover pointer-events-none" />
                   ) : user.user_metadata?.avatar_url ? (
-                    <img src={user.user_metadata.avatar_url} alt={user.user_metadata?.full_name || 'User'} className="w-full h-full rounded-full object-cover" />
+                    <img src={user.user_metadata.avatar_url} alt={user.user_metadata?.full_name || 'User'} className="w-full h-full rounded-full object-cover pointer-events-none" />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center">
+                    <div className="w-full h-full flex items-center justify-center pointer-events-none">
                       <UserIcon size={18} className="text-spotify-text-muted" />
                     </div>
                   )}
+                  <div className="absolute inset-0 z-10" />
                 </div>
               </button>
+
+              {/* Floating text sign below the profile picture */}
+              <motion.div
+                initial={{ opacity: 0, y: -6, scale: 0.9 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                className="absolute top-full right-0 mt-2.5 pointer-events-none z-50"
+              >
+                {/* Caret arrow */}
+                <div
+                  className="w-2 h-2 rotate-45 absolute -top-1 right-4"
+                  style={{
+                    background: 'rgba(239,68,68,0.25)',
+                    border: '1px solid rgba(239,68,68,0.4)',
+                    borderBottom: 'none',
+                    borderRight: 'none',
+                  }}
+                />
+                <div
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl whitespace-nowrap"
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(20,5,5,0.92) 0%, rgba(30,8,8,0.88) 100%)',
+                    border: '1px solid rgba(239,68,68,0.45)',
+                    backdropFilter: 'blur(16px)',
+                    WebkitBackdropFilter: 'blur(16px)',
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.5), 0 0 12px rgba(239,68,68,0.25)',
+                  }}
+                >
+                  <span
+                    className="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0"
+                    style={{ boxShadow: '0 0 5px rgba(239,68,68,1)', animation: 'red-badge-breathe 2s ease-in-out infinite' }}
+                  />
+                  <span className="text-[9px] font-black uppercase tracking-widest text-red-300 leading-none">
+                    New: Request Songs
+                  </span>
+                </div>
+              </motion.div>
               
               <AnimatePresence>
                 {isProfileOpen && (
@@ -382,6 +474,22 @@ export default function Header({ onUploadClick, onLoginClick, currentTheme, onTh
                         </motion.div>
                       )}
                     </div>
+                    <div className="relative">
+                      <button
+                        onClick={() => { setIsProfileOpen(false); onViewChange('uploads'); }}
+                        className="w-full text-left px-4 py-2.5 text-[11px] hover:bg-white/10 rounded-xl transition-all flex items-center justify-between group"
+                      >
+                          <span className="group-hover:translate-x-1 transition-transform">Your Uploads</span>
+                          <motion.span
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="text-[8px] font-black uppercase tracking-wide text-red-400"
+                            style={{ textShadow: '0 0 8px rgba(239,68,68,0.8)' }}
+                          >
+                            New
+                          </motion.span>
+                      </button>
+                    </div>
                     <button
                       onClick={() => { setIsProfileOpen(false); onViewChange('account'); }}
                       className="w-full text-left px-4 py-2.5 text-[11px] hover:bg-white/10 rounded-xl transition-all flex items-center justify-between group"
@@ -402,15 +510,20 @@ export default function Header({ onUploadClick, onLoginClick, currentTheme, onTh
             </div>
           </>
         ) : (
-          <motion.button
-            onClick={onLoginClick}
-            whileHover={{ scale: 1.05, y: -1 }}
-            whileTap={{ scale: 0.95 }}
-            className="relative overflow-hidden text-black px-5 md:px-7 py-2.5 rounded-full text-[11px] font-bold tracking-widest uppercase accent-shimmer"
-            style={{ background: 'var(--accent-gradient)', boxShadow: '0 4px 20px rgba(29, 185, 84, 0.3)' }}
-          >
-            Login
-          </motion.button>
+          <div className="flex items-center gap-4">
+            <span className="hidden md:inline-block text-[10px] text-spotify-text-muted font-bold tracking-widest uppercase">
+              Log in to upload songs
+            </span>
+            <motion.button
+              onClick={onLoginClick}
+              whileHover={{ scale: 1.05, y: -1 }}
+              whileTap={{ scale: 0.95 }}
+              className="relative overflow-hidden text-black px-5 md:px-7 py-2.5 rounded-full text-[11px] font-bold tracking-widest uppercase accent-shimmer"
+              style={{ background: 'var(--accent-gradient)', boxShadow: '0 4px 20px rgba(29, 185, 84, 0.3)' }}
+            >
+              Login
+            </motion.button>
+          </div>
         )}
       </div>
     </header>

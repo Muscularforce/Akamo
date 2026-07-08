@@ -356,6 +356,7 @@ export default function Player({ currentTrack, isPlaying, onTogglePlay, onNext, 
             onPlay={() => onSyncPlayState?.(true)}
             onPause={() => onSyncPlayState?.(false)}
             className="hidden"
+            preload="auto"
           />
         )}
 

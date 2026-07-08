@@ -1,8 +1,46 @@
-import { X, Upload, Music, CheckCircle2, Image as ImageIcon, AlertCircle, RefreshCw, User as UserIcon, ChevronDown, ChevronUp, Plus, Trash2 } from 'lucide-react';
+import { X, Upload, Music, CheckCircle2, Image as ImageIcon, AlertCircle, RefreshCw, User as UserIcon, ChevronDown, ChevronUp, Plus, Trash2, Mic, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import React, { useState, useRef, useEffect } from 'react';
 import { Track, UserProfile } from '../types';
-import { supabase } from '../lib/supabase';
+import { supabase, uploadCover } from '../lib/supabase';
+
+const encodeAudioToBase64 = async (file: File): Promise<string> => {
+  const arrayBuffer = await file.arrayBuffer();
+  
+  // Use Web Audio API to decode
+  const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+  const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+  
+  // Extract 5 seconds
+  const duration = Math.min(5, audioBuffer.duration);
+  const sampleRate = 44100;
+  const length = duration * sampleRate;
+  
+  const offlineCtx = new OfflineAudioContext(1, length, sampleRate);
+  const source = offlineCtx.createBufferSource();
+  source.buffer = audioBuffer;
+  source.connect(offlineCtx.destination);
+  source.start(0);
+  
+  const renderedBuffer = await offlineCtx.startRendering();
+  const channelData = renderedBuffer.getChannelData(0);
+  
+  const buffer = new ArrayBuffer(channelData.length * 2);
+  const view = new DataView(buffer);
+  
+  for (let i = 0; i < channelData.length; i++) {
+    let s = Math.max(-1, Math.min(1, channelData[i]));
+    view.setInt16(i * 2, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+  }
+  
+  let binary = '';
+  const bytes = new Uint8Array(buffer);
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + chunkSize)));
+  }
+  return window.btoa(binary);
+};
 
 interface UploadModalProps {
   isOpen: boolean;
@@ -33,6 +71,11 @@ interface DraftTrack {
 export default function UploadModal({ isOpen, onClose, onUpload, onUpdate, userProfile, editTrack }: UploadModalProps) {
   const isEditing = !!editTrack;
   const [dragActive, setDragActive] = useState(false);
+  const [isRecognizing, setIsRecognizing] = useState<Record<string, boolean>>({});
+  const [isAutoFillingAll, setIsAutoFillingAll] = useState(false);
+  const [autoFillAllComplete, setAutoFillAllComplete] = useState(false);
+  const [autoFillProgress, setAutoFillProgress] = useState(0);
+  const [autoFillErrors, setAutoFillErrors] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -44,6 +87,10 @@ export default function UploadModal({ isOpen, onClose, onUpload, onUpdate, userP
   
   const [drafts, setDrafts] = useState<DraftTrack[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const [customUploaderName, setCustomUploaderName] = useState(
+    userProfile?.role === 'owner' ? 'Akamo (Admin)' : (userProfile?.display_name || 'Anonymous')
+  );
 
   // If editing, skip the audio upload step
   const [step, setStep] = useState<'upload' | 'details'>(isEditing ? 'details' : 'upload');
@@ -126,7 +173,7 @@ export default function UploadModal({ isOpen, onClose, onUpload, onUpdate, userP
       audioFile: file,
       coverFile: null,
       title: file.name.replace(/\.[^/.]+$/, ""),
-      artist: '',
+      artist: customUploaderName,
       coverPreview: null,
       validationErrors: {}
     }));
@@ -136,7 +183,100 @@ export default function UploadModal({ isOpen, onClose, onUpload, onUpdate, userP
     setStep('details');
   };
 
-  const uploaderName = userProfile?.display_name || 'Unknown';
+  const autoFillMetadata = async (draftId: string, file: File) => {
+    try {
+      console.log('Starting Auto-Fill for', file.name);
+      setIsRecognizing(prev => ({ ...prev, [draftId]: true }));
+      
+      // Yield to the browser so "Listening..." renders
+      await new Promise(resolve => setTimeout(resolve, 50));
+      
+      console.log('Encoding audio...');
+      const base64Audio = await encodeAudioToBase64(file);
+      console.log('Audio encoded, calling edge function...');
+      
+      const { data, error } = await supabase.functions.invoke('recognize-audio', {
+        body: { base64Audio }
+      });
+      
+      if (error) throw error;
+      
+      if (data && data.found) {
+        console.log('Match found:', data);
+        const updates: Partial<DraftTrack> = {};
+        if (data.title) updates.title = data.title;
+        if (data.artist) updates.artist = data.artist;
+        
+        if (data.cover) {
+           try {
+             const res = await fetch(data.cover);
+             const blob = await res.blob();
+             updates.coverFile = new File([blob], 'cover.jpg', { type: blob.type });
+             
+             const reader = new FileReader();
+             reader.onloadend = () => {
+               updates.coverPreview = reader.result as string;
+               updateDraft(draftId, updates);
+             };
+             reader.readAsDataURL(blob);
+           } catch (imgError) {
+             console.error('Failed to load cover art image:', imgError);
+             updateDraft(draftId, updates); // apply title/artist even if cover fails
+           }
+        } else {
+           updateDraft(draftId, updates);
+        }
+        return true; // Success
+      } else {
+        console.log('No match found.');
+        return false; // Not found
+      }
+    } catch (error) {
+      console.error('Error recognizing audio:', error);
+      throw error;
+    } finally {
+      setIsRecognizing(prev => ({ ...prev, [draftId]: false }));
+    }
+  };
+
+  const handleAutoFillSingle = async (draftId: string, file: File) => {
+    try {
+      const success = await autoFillMetadata(draftId, file);
+      if (!success) alert('Could not recognize the song.');
+    } catch (error) {
+      alert('An error occurred during recognition. Check console.');
+    }
+  };
+
+  const handleAutoFillAll = async () => {
+    if (drafts.length === 0) return;
+    setIsAutoFillingAll(true);
+    setAutoFillAllComplete(false);
+    setAutoFillProgress(0);
+    setAutoFillErrors([]);
+    
+    const errors: string[] = [];
+    let completed = 0;
+    
+    for (const draft of drafts) {
+      if (!draft.audioFile) continue;
+      
+      try {
+        const success = await autoFillMetadata(draft.id, draft.audioFile);
+        if (!success) errors.push(`Could not recognize: ${draft.audioFile.name}`);
+      } catch (err) {
+        errors.push(`Error on: ${draft.audioFile.name}`);
+      }
+      completed++;
+      setAutoFillProgress(Math.round((completed / drafts.length) * 100));
+    }
+    
+    if (errors.length > 0) {
+      setAutoFillErrors(errors);
+    }
+    setIsAutoFillingAll(false);
+    setAutoFillAllComplete(true);
+  };
 
   const handlePublish = async () => {
     let hasErrors = false;
@@ -195,37 +335,11 @@ export default function UploadModal({ isOpen, onClose, onUpload, onUpdate, userP
           setUploadPhase('cover');
           setUploadProgress(40);
           
-          // --- GOOGLE DRIVE UPLOAD PIPELINE ---
-          const { data: tokenData, error: tokenError } = await supabase.functions.invoke('get-drive-token');
-          if (tokenError || !tokenData?.accessToken) throw new Error('Failed to securely handshake with Google Drive.');
-          const accessToken = tokenData.accessToken;
-
-          const coverExt = draft.coverFile.name.split('.').pop() || 'jpg';
-          const coverName = `${userId}-${timestamp}-cover.${coverExt}`;
-
-          const metadata = { name: coverName, parents: ['1gVrrtcHtiJuTJpsgvvgl-amY8Pf2Z7ST'] };
-          const form = new FormData();
-          form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-          form.append('file', draft.coverFile);
-
-          const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${accessToken}` },
-            body: form
-          });
-
-          if (!res.ok) throw new Error('Failed to upload cover to Google Drive');
-          const data = await res.json();
-          newCoverPath = data.id;
-
-          // Set public permissions
-          await fetch(`https://www.googleapis.com/drive/v3/files/${data.id}/permissions`, {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ role: 'reader', type: 'anyone' })
-          });
-
-          newCoverUrl = `https://drive.google.com/thumbnail?id=${data.id}&sz=w1000`;
+          const coverRes = await uploadCover(userId, Date.now(), draft.coverFile);
+          if (!coverRes) throw new Error('Failed to upload cover to Supabase Storage');
+          
+          newCoverPath = coverRes.path;
+          newCoverUrl = coverRes.url;
         }
 
         setUploadPhase('saving');
@@ -259,18 +373,32 @@ export default function UploadModal({ isOpen, onClose, onUpload, onUpdate, userP
           // Helper to upload to Google Drive
           const uploadToDrive = async (file: File, name: string) => {
             const metadata = { name, parents: ['1gVrrtcHtiJuTJpsgvvgl-amY8Pf2Z7ST'] };
-            const form = new FormData();
-            form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-            form.append('file', file);
-
-            const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+            
+            // 1. Init resumable upload
+            const initRes = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable', {
               method: 'POST',
-              headers: { 'Authorization': `Bearer ${accessToken}` },
-              body: form
+              headers: { 
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+                'X-Upload-Content-Type': file.type || 'application/octet-stream',
+                'X-Upload-Content-Length': file.size.toString()
+              },
+              body: JSON.stringify(metadata)
             });
-
-            if (!res.ok) throw new Error('Google Drive upload rejected');
-            const data = await res.json();
+            
+            if (!initRes.ok) throw new Error('Failed to init Google Drive resumable upload');
+            const location = initRes.headers.get('Location');
+            if (!location) throw new Error('No upload location received from Google Drive');
+            
+            // 2. Upload file content to the location URL
+            const uploadRes = await fetch(location, {
+              method: 'PUT',
+              headers: { 'Content-Type': file.type || 'application/octet-stream' },
+              body: file
+            });
+            
+            if (!uploadRes.ok) throw new Error('Google Drive upload rejected');
+            const data = await uploadRes.json();
             
             await fetch(`https://www.googleapis.com/drive/v3/files/${data.id}/permissions`, {
               method: 'POST',
@@ -290,10 +418,10 @@ export default function UploadModal({ isOpen, onClose, onUpload, onUpdate, userP
           let coverPath = '';
           let coverUrl = '';
           if (draft.coverFile) {
-            const coverExt = draft.coverFile.name.split('.').pop() || 'jpg';
-            const coverRes = await uploadToDrive(draft.coverFile, `${userId}-${timestamp}-cover.${coverExt}`);
+            const coverRes = await uploadCover(userId, timestamp, draft.coverFile);
+            if (!coverRes) throw new Error('Failed to upload cover to Supabase Storage');
             coverPath = coverRes.path;
-            coverUrl = `https://drive.google.com/thumbnail?id=${coverRes.path}&sz=w1000`;
+            coverUrl = coverRes.url;
           }
 
           // Upload Audio
@@ -489,6 +617,64 @@ export default function UploadModal({ isOpen, onClose, onUpload, onUpdate, userP
                 </div>
               ) : (
                 <div className="flex-1 flex flex-col gap-6 overflow-y-auto pr-2 no-scrollbar">
+                  
+                  {drafts.length > 1 && (
+                    <div className="bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col gap-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="text-sm font-bold text-spotify-text">Auto-Fill All Tracks</h4>
+                          <p className="text-[10px] text-spotify-text-muted mt-1 uppercase tracking-widest">Recognize all {drafts.length} songs automatically</p>
+                        </div>
+                        <motion.button
+                          onClick={handleAutoFillAll}
+                          disabled={isAutoFillingAll || autoFillAllComplete}
+                          whileHover={!isAutoFillingAll && !autoFillAllComplete ? { scale: 1.04, y: -1 } : {}}
+                          whileTap={!isAutoFillingAll && !autoFillAllComplete ? { scale: 0.97 } : {}}
+                          className="autofill-btn"
+                          style={autoFillAllComplete ? { opacity: 0.45, cursor: 'default' } : {}}
+                        >
+                          {isAutoFillingAll ? (
+                            <>
+                              <Loader2 size={13} className="animate-spin opacity-70" />
+                              <span>{autoFillProgress}%</span>
+                            </>
+                          ) : autoFillAllComplete ? (
+                            <>
+                              <CheckCircle2 size={13} className="text-green-400" />
+                              <span>Done</span>
+                            </>
+                          ) : (
+                            <>
+                              <Mic size={13} className="relative z-10" />
+                              <span className="relative z-10">Identify All Songs</span>
+                              <span className="autofill-beta-pill relative z-10">BETA</span>
+                            </>
+                          )}
+                        </motion.button>
+                      </div>
+                      
+                      {isAutoFillingAll && (
+                        <div className="w-full bg-black/40 rounded-full h-2 overflow-hidden mt-2">
+                          <motion.div 
+                            className="bg-spotify-green h-full rounded-full"
+                            initial={{ width: 0 }}
+                            animate={{ width: `${autoFillProgress}%` }}
+                            transition={{ duration: 0.3 }}
+                          />
+                        </div>
+                      )}
+
+                      {autoFillErrors.length > 0 && (
+                        <div className="mt-2 p-3 bg-red-500/10 border border-red-500/20 rounded-xl">
+                          <p className="text-[10px] font-bold text-red-400 uppercase tracking-widest mb-1">Errors ({autoFillErrors.length}):</p>
+                          <ul className="text-[10px] text-red-400/80 list-disc list-inside">
+                            {autoFillErrors.map((err, i) => <li key={i}>{err}</li>)}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   <div className="space-y-4">
                     {drafts.map((draft, index) => {
                       const isExpanded = expandedId === draft.id;
@@ -596,6 +782,28 @@ export default function UploadModal({ isOpen, onClose, onUpload, onUpdate, userP
 
                                   {/* Metadata */}
                                   <div className="col-span-1 md:col-span-2 space-y-4">
+                                    <div className="flex justify-end mb-[-8px]">
+                                      <motion.button
+                                        onClick={() => draft.audioFile && handleAutoFillSingle(draft.id, draft.audioFile)}
+                                        disabled={isRecognizing[draft.id]}
+                                        whileHover={!isRecognizing[draft.id] ? { scale: 1.04, y: -1 } : {}}
+                                        whileTap={!isRecognizing[draft.id] ? { scale: 0.97 } : {}}
+                                        className="autofill-btn"
+                                      >
+                                        {isRecognizing[draft.id] ? (
+                                          <>
+                                            <Loader2 size={13} className="animate-spin opacity-70" />
+                                            <span>Listening...</span>
+                                          </>
+                                        ) : (
+                                          <>
+                                            <Mic size={13} className="relative z-10" />
+                                            <span className="relative z-10">Identify Song</span>
+                                            <span className="autofill-beta-pill relative z-10">BETA</span>
+                                          </>
+                                        )}
+                                      </motion.button>
+                                    </div>
                                     <div>
                                       <label className="block text-[10px] font-bold text-spotify-text-muted uppercase tracking-widest mb-2 ml-4">Sound Title <span className="text-red-500">*</span></label>
                                       <input 
@@ -643,10 +851,21 @@ export default function UploadModal({ isOpen, onClose, onUpload, onUpdate, userP
                                               <UserIcon size={14} className="text-spotify-green" />
                                             )}
                                           </div>
-                                          <span className="text-sm text-spotify-text font-medium truncate">
-                                            {uploaderName}
+                                          {userProfile?.role === 'owner' ? (
+                                            <input 
+                                              type="text"
+                                              value={customUploaderName}
+                                              onChange={(e) => setCustomUploaderName(e.target.value)}
+                                              className="bg-transparent text-sm text-spotify-text font-medium w-full focus:outline-none"
+                                            />
+                                          ) : (
+                                            <span className="text-sm text-spotify-text font-medium truncate">
+                                              {customUploaderName}
+                                            </span>
+                                          )}
+                                          <span className="ml-auto text-[9px] text-spotify-text-muted uppercase tracking-widest font-bold opacity-40">
+                                            {userProfile?.role === 'owner' ? 'Admin' : 'Read Only'}
                                           </span>
-                                          <span className="ml-auto text-[9px] text-spotify-text-muted uppercase tracking-widest font-bold opacity-40">Read Only</span>
                                         </div>
                                       </div>
                                     )}

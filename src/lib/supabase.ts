@@ -58,7 +58,7 @@ export async function fetchProfile(userId: string): Promise<UserProfile | null> 
  */
 export async function upsertProfile(
   userId: string,
-  updates: Partial<Pick<UserProfile, 'display_name' | 'avatar_url'>>
+  updates: Partial<Pick<UserProfile, 'display_name' | 'avatar_url' | 'username'>>
 ): Promise<UserProfile | null> {
   const { data, error } = await supabase
     .from('profiles')
@@ -71,6 +71,36 @@ export async function upsertProfile(
     return null;
   }
   return data as UserProfile;
+}
+
+/**
+ * Check if a username is available (true if available, false if taken)
+ */
+export async function checkUsernameAvailability(username: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('username', username)
+    .maybeSingle();
+    
+  return !data;
+}
+
+/**
+ * Fetch all tracks uploaded by a specific user
+ */
+export async function fetchUserTracks(userId: string): Promise<Track[]> {
+  const { data, error } = await supabase
+    .from('tracks')
+    .select('*')
+    .eq('ownerId', userId)
+    .order('uploadedAt', { ascending: false });
+
+  if (error) {
+    console.error('[Akamo] fetchUserTracks failed:', error);
+    return [];
+  }
+  return (data || []) as Track[];
 }
 
 /**
@@ -93,6 +123,27 @@ export async function uploadAvatar(userId: string, file: File): Promise<string |
   const { data } = supabase.storage.from('songs').getPublicUrl(path);
   // Append cache-buster to force reload after update
   return `${data.publicUrl}?t=${Date.now()}`;
+}
+
+/**
+ * Upload a cover image and return the public URL and path.
+ * Stores in the `songs` bucket under `covers/{userId}-{timestamp}.ext`.
+ */
+export async function uploadCover(userId: string, timestamp: number, file: File): Promise<{ path: string, url: string } | null> {
+  const ext = file.name.split('.').pop() || 'jpg';
+  const path = `covers/${userId}-${timestamp}.${ext}`;
+
+  const { error } = await supabase.storage
+    .from('songs')
+    .upload(path, file, { upsert: true, contentType: file.type });
+
+  if (error) {
+    console.error('[Akamo] Cover upload failed:', error);
+    return null;
+  }
+
+  const { data } = supabase.storage.from('songs').getPublicUrl(path);
+  return { path, url: data.publicUrl };
 }
 
 // ─── Album Helpers ──────────────────────────────────────────────────────────
@@ -528,4 +579,50 @@ export async function fetchUserStats(): Promise<UserStat[]> {
     return [];
   }
   return data as UserStat[];
+}
+
+// ─── Song Request Helpers ───────────────────────────────────────────────────
+
+export async function createSongRequest(titles: string[], userName?: string): Promise<boolean> {
+  const insertData = titles.map(title => ({
+    title,
+    user_name: userName || 'Anonymous',
+    status: 'pending'
+  }));
+
+  const { error } = await supabase
+    .from('song_requests')
+    .insert(insertData);
+
+  if (error) {
+    console.error('[Akamo] createSongRequest failed:', error);
+    return false;
+  }
+  return true;
+}
+
+export async function fetchSongRequests(): Promise<any[]> {
+  const { data, error } = await supabase
+    .from('song_requests')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('[Akamo] fetchSongRequests failed:', error);
+    return [];
+  }
+  return data || [];
+}
+
+export async function updateSongRequestStatus(id: string, status: 'approved' | 'rejected'): Promise<boolean> {
+  const { error } = await supabase
+    .from('song_requests')
+    .update({ status })
+    .eq('id', id);
+
+  if (error) {
+    console.error('[Akamo] updateSongRequestStatus failed:', error);
+    return false;
+  }
+  return true;
 }

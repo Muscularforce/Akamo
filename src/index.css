@@ -238,6 +238,111 @@
   text-shadow: 0 0 20px rgba(29, 185, 84, 0.5), 0 0 40px rgba(29, 185, 84, 0.2);
 }
 
+/* ─── Apple-Style Autofill Button ───────────────────────────────────────── */
+
+.autofill-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 18px;
+  border-radius: 14px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #000000;
+  cursor: pointer;
+  background: var(--accent-gradient);
+  box-shadow: var(--accent-glow);
+  border: none;
+  transition:
+    box-shadow 0.25s ease,
+    background 0.25s ease,
+    transform 0.25s ease;
+  overflow: hidden;
+  will-change: transform, box-shadow;
+}
+
+/* Shimmer sweep on hover */
+.autofill-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.4) 50%,
+    transparent 70%
+  );
+  background-size: 200% 100%;
+  background-position: 200% 0;
+  transition: background-position 0.6s ease;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+.autofill-btn:hover::before {
+  background-position: -200% 0;
+}
+
+.autofill-btn:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 0 40px rgba(29, 185, 84, 0.8), 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.autofill-btn:disabled {
+  opacity: 0.5;
+  filter: grayscale(100%);
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.autofill-btn:disabled::before {
+  display: none;
+}
+
+/* The BETA pill inside the button */
+.autofill-beta-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 6px;
+  font-size: 7.5px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  background: rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(0, 0, 0, 0.3);
+  color: #000000;
+  white-space: nowrap;
+}
+
+/* ─── Red Notification Badge Glow ───────────────────────────────────────── */
+
+.red-badge-glow {
+  box-shadow:
+    0 0 6px  rgba(239, 68, 68, 0.9),
+    0 0 14px rgba(239, 68, 68, 0.6),
+    0 0 28px rgba(239, 68, 68, 0.3);
+  animation: red-badge-breathe 2s ease-in-out infinite;
+}
+
+@keyframes red-badge-breathe {
+  0%, 100% {
+    box-shadow:
+      0 0 6px  rgba(239, 68, 68, 0.9),
+      0 0 14px rgba(239, 68, 68, 0.6),
+      0 0 28px rgba(239, 68, 68, 0.3);
+  }
+  50% {
+    box-shadow:
+      0 0 10px rgba(239, 68, 68, 1),
+      0 0 22px rgba(239, 68, 68, 0.8),
+      0 0 40px rgba(239, 68, 68, 0.4);
+  }
+}
+
 /* ─── GPU Compositing & High Refresh Rate ────────────────────────────────── */
 /* Forces animated elements onto their own compositor layer so animations    */
 /* run on the GPU at the display's native refresh rate (120Hz / 144Hz / 240Hz). */

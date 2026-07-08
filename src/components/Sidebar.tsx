@@ -29,21 +29,27 @@ export default function Sidebar({ activeView, onViewChange, onCreatePlaylist }: 
         onClick={() => onViewChange('home')}
       >
         {!logoFailed ? (
-          <img
-            src="/logo.png"
-            alt="Akamo Logo"
-            className="h-10 w-auto object-contain"
-            onError={() => setLogoFailed(true)}
-          />
+          <div className="flex flex-col items-start gap-1">
+            <img
+              src="/logo.png"
+              alt="Akamo Logo"
+              className="h-10 w-auto object-contain"
+              onError={() => setLogoFailed(true)}
+            />
+            <span className="text-[10px] font-bold text-spotify-text-muted uppercase tracking-widest ml-1">v1.4</span>
+          </div>
         ) : (
-          <div className="flex items-center gap-4">
-             <div
-              className="w-10 h-10 rounded-2xl flex items-center justify-center shadow-2xl transition-all duration-500 accent-glow"
-              style={{ background: 'var(--accent-gradient)' }}
-            >
-                <span className="text-black font-black text-lg italic tracking-tighter">A</span>
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-4">
+              <div
+                className="w-10 h-10 rounded-2xl flex items-center justify-center shadow-2xl transition-all duration-500 accent-glow"
+                style={{ background: 'var(--accent-gradient)' }}
+              >
+                  <span className="text-black font-black text-lg italic tracking-tighter">A</span>
+              </div>
+              <span className="text-3xl font-display font-bold tracking-tighter group-hover:text-glow transition-all">Akamo</span>
             </div>
-            <span className="text-3xl font-display font-bold tracking-tighter group-hover:text-glow transition-all">Akamo</span>
+            <span className="text-[10px] font-bold text-spotify-text-muted uppercase tracking-widest ml-14">v1.4</span>
           </div>
         )}
       </div>

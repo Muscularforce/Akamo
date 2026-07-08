@@ -14,6 +14,8 @@ import AuthPage from './components/AuthPage';
 import AboutSection from './components/AboutSection';
 import VerifiedPage from './components/VerifiedPage';
 import AccountSettings from './components/AccountSettings';
+import UploadsDashboard from './components/UploadsDashboard';
+import AdminRequests from './components/AdminRequests';
 import AlbumsView from './components/AlbumsView';
 import AlbumDetailView from './components/AlbumDetailView';
 import PlaylistsView from './components/PlaylistsView';
@@ -143,7 +145,7 @@ export default function App() {
         setTracks(data as Track[]);
         if (data.length > 0 && !hasSetInitialTrack.current) {
           hasSetInitialTrack.current = true;
-          setCurrentTrack(data[0] as Track);
+          setCurrentTrack((data as Track[])[0]);
         }
       }
     };
@@ -585,6 +587,22 @@ export default function App() {
             userProfile={userProfile}
             onProfileUpdate={(updated) => setUserProfile(updated)}
             onBack={() => setCurrentView('home')}
+            onAdminRequests={() => setCurrentView('admin-requests')}
+          />
+        ) : null;
+      case 'uploads':
+        return user && userProfile ? (
+          <UploadsDashboard
+            userProfile={userProfile}
+            onBack={() => setCurrentView('home')}
+            onEditTrack={handleEditTrack}
+          />
+        ) : null;
+      case 'admin-requests':
+        return user && userProfile && (userProfile.role === 'owner' || isFounder(user.email)) ? (
+          <AdminRequests
+            userProfile={userProfile}
+            onBack={() => setCurrentView('account')}
           />
         ) : null;
       default:
