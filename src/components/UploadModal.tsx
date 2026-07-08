@@ -2,7 +2,7 @@ import { X, Upload, Music, CheckCircle2, Image as ImageIcon, AlertCircle, Refres
 import { motion, AnimatePresence } from 'motion/react';
 import React, { useState, useRef, useEffect } from 'react';
 import { Track, UserProfile } from '../types';
-import { supabase, uploadCover } from '../lib/supabase';
+import { supabase, uploadCover, fetchAllProfiles } from '../lib/supabase';
 
 const encodeAudioToBase64 = async (file: File): Promise<string> => {
   const arrayBuffer = await file.arrayBuffer();
@@ -91,6 +91,16 @@ export default function UploadModal({ isOpen, onClose, onUpload, onUpdate, userP
   const [customUploaderName, setCustomUploaderName] = useState(
     userProfile?.role === 'owner' ? 'Jovan Fernandes' : (userProfile?.display_name || 'Anonymous')
   );
+  
+  const [adminProfiles, setAdminProfiles] = useState<UserProfile[]>([]);
+
+  useEffect(() => {
+    if (isOpen && userProfile?.role === 'owner') {
+      fetchAllProfiles().then(profiles => {
+        if (profiles.length > 0) setAdminProfiles(profiles);
+      });
+    }
+  }, [isOpen, userProfile]);
 
   const handleUploaderNameChange = (newName: string) => {
     const oldName = customUploaderName;
@@ -646,6 +656,13 @@ export default function UploadModal({ isOpen, onClose, onUpload, onUpdate, userP
                             >
                               <option value="Jovan Fernandes" className="bg-spotify-black text-white">Jovan Fernandes</option>
                               <option value="Akamo (Admin)" className="bg-spotify-black text-white">Akamo (Admin)</option>
+                              {adminProfiles
+                                .filter(p => p.display_name !== 'Jovan Fernandes' && p.display_name !== 'Akamo (Admin)')
+                                .map(p => (
+                                  <option key={p.id} value={p.display_name} className="bg-spotify-black text-white">
+                                    {p.display_name}
+                                  </option>
+                              ))}
                               <option value="Anonymous" className="bg-spotify-black text-white">Anonymous</option>
                             </select>
                             <div className="pointer-events-none absolute inset-y-0 right-16 flex items-center px-2 text-spotify-text-muted">

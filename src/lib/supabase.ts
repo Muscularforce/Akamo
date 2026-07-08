@@ -54,6 +54,22 @@ export async function fetchProfile(userId: string): Promise<UserProfile | null> 
 }
 
 /**
+ * Fetch all profiles (for admin use)
+ */
+export async function fetchAllProfiles(): Promise<UserProfile[]> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .order('display_name');
+
+  if (error) {
+    console.error('[Akamo] fetchAllProfiles failed:', error);
+    return [];
+  }
+  return data as UserProfile[];
+}
+
+/**
  * Upsert a profile — creates it if missing, updates if exists.
  */
 export async function upsertProfile(
