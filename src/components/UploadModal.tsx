@@ -636,7 +636,7 @@ export default function UploadModal({ isOpen, onClose, onUpload, onUpdate, userP
                 <div className="flex-1 flex flex-col gap-6 overflow-y-auto pr-2 no-scrollbar">
 {/* Auto-Fill All Tracks */}
                   
-                  {!isEditing && (
+                  {!isEditing && userProfile?.role === 'owner' && (
                     <div className="mb-6">
                       <label className="block text-[10px] font-bold text-spotify-text-muted uppercase tracking-widest mb-2 ml-4">Publishing As</label>
                       <div className="w-full h-14 bg-white/[0.03] rounded-2xl px-6 flex items-center gap-3 border border-white/5 relative">
@@ -669,13 +669,8 @@ export default function UploadModal({ isOpen, onClose, onUpload, onUpdate, userP
                               <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
                             </div>
                           </div>
-                        ) : (
-                          <span className="text-sm text-spotify-text font-medium truncate flex-1">
-                            {customUploaderName || 'Jovan Fernandes'}
-                          </span>
-                        )}
                         <span className="ml-auto text-[9px] text-spotify-text-muted uppercase tracking-widest font-bold opacity-40 shrink-0">
-                          {userProfile?.role === 'owner' ? 'Admin' : 'Read Only'}
+                          Admin
                         </span>
                       </div>
                     </div>
