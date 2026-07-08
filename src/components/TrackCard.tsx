@@ -20,7 +20,8 @@ interface TrackCardProps {
 }
 
 export default function TrackCard({ track, isActive, onPlay, onDelete, onEdit, user, playlists, onAddToPlaylist, onCreatePlaylistWithTrack }: TrackCardProps) {
-  const isCreator = isFounder(track.ownerEmail);
+  // Rainbow outline applies if the track is published as Jovan Fernandes
+  const isCreator = track.artist === 'Jovan Fernandes';
   const canDelete = user && (track.ownerId === user.id || isFounder(user.email));
   const [menuOpen, setMenuOpen] = useState(false);
   const [showPlaylists, setShowPlaylists] = useState(false);

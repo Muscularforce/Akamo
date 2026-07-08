@@ -125,14 +125,16 @@ export default function UploadModal({ isOpen, onClose, onUpload, onUpdate, userP
         coverPreview: editTrack.coverUrl,
         validationErrors: {}
       }]);
+      setCustomUploaderName(editTrack.artist);
       setExpandedId(editTrack.id);
       setStep('details');
     } else {
       setDrafts([]);
+      setCustomUploaderName(userProfile?.role === 'owner' ? 'Jovan Fernandes' : (userProfile?.display_name || 'Anonymous'));
       setExpandedId(null);
       setStep('upload');
     }
-  }, [editTrack, isOpen]);
+  }, [editTrack, isOpen, userProfile]);
 
   // Clear field-level error when user fixes it
   const updateDraft = (id: string, updates: Partial<DraftTrack>) => {
@@ -636,7 +638,7 @@ export default function UploadModal({ isOpen, onClose, onUpload, onUpdate, userP
                 <div className="flex-1 flex flex-col gap-6 overflow-y-auto pr-2 no-scrollbar">
 {/* Auto-Fill All Tracks */}
                   
-                  {!isEditing && userProfile?.role === 'owner' && (
+                  {userProfile?.role === 'owner' && (
                     <div className="mb-6">
                       <label className="block text-[10px] font-bold text-spotify-text-muted uppercase tracking-widest mb-2 ml-4">Publishing As</label>
                       <div className="w-full h-14 bg-white/[0.03] rounded-2xl px-6 flex items-center gap-3 border border-white/5 relative">
