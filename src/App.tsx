@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useComingSoon } from './components/ComingSoonToast';
-import { Play } from 'lucide-react';
+import { Play, Loader2 } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import Player from './components/Player';
 import Header from './components/Header';
@@ -607,6 +607,7 @@ export default function App() {
       case 'account':
         return user && userProfile ? (
           <AccountSettings
+            key="account"
             user={user}
             userProfile={userProfile}
             onProfileUpdate={(updated) => setUserProfile(updated)}
@@ -617,14 +618,20 @@ export default function App() {
       case 'uploads':
         return user && userProfile ? (
           <UploadsDashboard
+            key="uploads"
             userProfile={userProfile}
             onBack={() => setCurrentView('home')}
             onEditTrack={handleEditTrack}
           />
-        ) : null;
+        ) : (
+          <div key="uploads-loading" className="flex items-center justify-center py-20">
+            <Loader2 className="animate-spin text-spotify-green" size={32} />
+          </div>
+        );
       case 'admin-requests':
         return user && userProfile && (userProfile.role === 'owner' || isFounder(user.email)) ? (
           <AdminRequests
+            key="admin-requests"
             userProfile={userProfile}
             onBack={() => setCurrentView('account')}
           />

@@ -170,12 +170,12 @@ export default function Header({ onUploadClick, onLoginClick, currentTheme, onTh
                 <span className="gpu-accelerated relative z-10 text-shadow-sm hidden sm:inline">Social</span>
             </motion.button>
 
-            {/* Upload button */}
+            {/* Upload button ALWAYS VISIBLE FOR DEBUGGING */}
             <div className="relative">
               <motion.button
                   whileHover={{ scale: 1.05, y: -2 }}
                   whileTap={{ scale: 0.95 }}
-                  onClick={handleUploadClick}
+                  onClick={onUploadClick}
                   className="accent-shimmer flex items-center gap-1.5 md:gap-2 text-black px-2.5 sm:px-3 md:px-5 py-2 rounded-full text-[11px] font-bold transition-all"
                   style={!hasSeenUploadTooltip ? {
                     background: 'var(--accent-gradient)',
@@ -183,48 +183,31 @@ export default function Header({ onUploadClick, onLoginClick, currentTheme, onTh
                     transition: 'box-shadow 0.4s ease',
                   } : { background: 'var(--accent-gradient)' }}
               >
-                  <Upload size={14} />
-                  <span className="uppercase tracking-widest hidden sm:inline">Upload</span>
+                <Upload size={14} strokeWidth={3} />
+                <span className="hidden sm:inline tracking-widest uppercase">Upload</span>
               </motion.button>
-
-              {/* Floating text sign below the upload button */}
+              
               {!hasSeenUploadTooltip && (
-                <motion.div
-                  initial={{ opacity: 0, y: -6, scale: 0.9 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  className="absolute top-full right-0 sm:left-1/2 sm:-translate-x-1/2 sm:right-auto mt-2.5 pointer-events-none z-50"
-                >
-                  {/* Caret arrow */}
-                  <div
-                    className="w-2 h-2 rotate-45 absolute -top-1 right-6 sm:left-1/2 sm:-translate-x-1/2 sm:right-auto"
-                    style={{
-                      background: 'rgba(239,68,68,0.25)',
-                      border: '1px solid rgba(239,68,68,0.4)',
-                      borderBottom: 'none',
-                      borderRight: 'none',
+                <div className="absolute top-full mt-3 right-0 w-48 bg-spotify-light-gray p-3 rounded-xl shadow-2xl border border-white/10 z-50">
+                  <p className="text-[10px] text-white font-bold mb-1">New Feature!</p>
+                  <p className="text-[10px] text-spotify-text-muted leading-relaxed">
+                    Instantly autofill song details with just one click.
+                  </p>
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setHasSeenUploadTooltip(true);
+                      localStorage.setItem('has_seen_upload_tooltip', 'true');
                     }}
-                  />
-                  <div
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl whitespace-nowrap"
-                    style={{
-                      background: 'linear-gradient(135deg, rgba(20,5,5,0.92) 0%, rgba(30,8,8,0.88) 100%)',
-                      border: '1px solid rgba(239,68,68,0.45)',
-                      backdropFilter: 'blur(16px)',
-                      WebkitBackdropFilter: 'blur(16px)',
-                      boxShadow: '0 4px 20px rgba(0,0,0,0.5), 0 0 12px rgba(239,68,68,0.25)',
-                    }}
+                    className="mt-2 w-full py-1.5 bg-white/10 hover:bg-white/20 text-white text-[9px] rounded-lg transition-colors uppercase tracking-widest font-bold"
                   >
-                    <span
-                      className="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0"
-                      style={{ boxShadow: '0 0 5px rgba(239,68,68,1)', animation: 'red-badge-breathe 2s ease-in-out infinite' }}
-                    />
-                    <span className="text-[9px] font-black uppercase tracking-widest text-red-300 leading-none">
-                      New: Autofill Feature
-                    </span>
-                  </div>
-                </motion.div>
+                    Got it
+                  </button>
+                </div>
               )}
             </div>
+
+
 
             {/* Bell */}
             <div className="relative" ref={notificationsRef}>

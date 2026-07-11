@@ -70,6 +70,8 @@ interface DraftTrack {
 
 export default function UploadModal({ isOpen, onClose, onUpload, onUpdate, userProfile, editTrack }: UploadModalProps) {
   const isEditing = !!editTrack;
+  const userId = userProfile?.id || '';
+  const customUploaderName = userProfile?.display_name || 'Unknown Artist';
   const [dragActive, setDragActive] = useState(false);
   const [isRecognizing, setIsRecognizing] = useState<Record<string, boolean>>({});
   const [isAutoFillingAll, setIsAutoFillingAll] = useState(false);
