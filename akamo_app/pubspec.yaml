@@ -1,0 +1,44 @@
+name: akamo_app
+description: "A new Flutter project."
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.13.0
+
+dependencies:
+  audio_service: ^0.18.19
+  cached_network_image: ^3.4.1
+  file_picker: ^12.0.0
+  flutter:
+    sdk: flutter
+  flutter_dotenv: ^6.0.1
+  google_fonts: ^6.2.1
+  just_audio: ^0.10.6
+  provider: ^6.1.5+1
+  supabase_flutter: ^2.17.1
+  flutter_native_splash: ^2.4.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
+
+flutter:
+  uses-material-design: true
+  assets:
+    - .env
+    - assets/icon.jpg
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/icon.jpg"
+  min_sdk_android: 21
+
+flutter_native_splash:
+  color: "#0a0a0a"
+  image: "assets/icon.jpg"
+  android: true
+  ios: true
